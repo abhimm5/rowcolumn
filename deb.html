@@ -1,0 +1,89 @@
+<!DOCTYPE html>
+<html>
+<head>
+  <style type="text/css" id="dcoder_stylesheet">
+   .one,.two,.three,.four,.five,.six{
+      background-color:gray;
+      padding:5px;
+    }
+  body{
+    margin:0px;
+    height : 100%;
+  }
+  .odd{
+    background-color: yellow;
+  }
+  </style>
+</head> 
+<body> 
+  <grid layout="splitting(30,12,12)"> 
+   <div class="one" id="first">
+     One 
+   </div>  
+   <div class="odd" id="test">
+     two 
+   </div>
+   <div class="one">
+     three 
+   </div> 
+   <div class="odd" id="test2">
+     four
+   </div>
+   <div class="one">
+     One 
+   </div>  
+   <div class="odd" id="test">
+     two 
+   </div>
+   <div class="one">
+     three 
+   </div> 
+   <div class="odd" id="test2">
+     four
+   </div>
+  </grid> 
+  <p id="testing">jgjfgj</p>
+  <p id="testing2">jgjfgj</p>
+
+
+<p id="demo"></p>
+
+<script>
+var main = document.getElementsByTagName("grid")[0];
+main.style.display = "grid";
+
+const vp = ["vw","vh"];
+const dirKey = [ "perpendicular", "parallel","both", "none"];
+const units = ["vh","%","em"];
+const baseNums = [38.2,61.8,100,1.618,0];
+const layNames = ["split1","split2","direction","rotation", "modify","clear"];
+
+const verGrids = [];
+const horGrids = [];
+const gridLines = []
+
+const ratio = 1.618;
+const parent = 100;
+const lg =  61.2;
+const sm = 38.8;
+
+var arr = [];
+
+Object.prototype.arngGrid = function(){
+ return arr.push(this);
+}
+
+Number.prototype.splits = function(a,b,c){
+  let result = {};
+  for (var i = 0; i < arguments.length; i++) {
+    result[i] = (Number.isInteger(arguments[i])? this * arguments[i]:arguments[i]);
+  }
+result.arngGrid()
+}
+
+var k = (100).splits(lg,sm.splits(lg.splits(lg,sm,"perpendicular1"),sm.splits(lg,sm,"parallel1"),"parallel"),"perpendicular");
+
+</script>
+
+</body>
+</html>
