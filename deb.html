@@ -1,89 +1,129 @@
 <!DOCTYPE html>
 <html>
+
 <head>
   <style type="text/css" id="dcoder_stylesheet">
-   .one,.two,.three,.four,.five,.six{
-      background-color:gray;
-      padding:5px;
+    .one,
+    .two,
+    .three,
+    .four,
+    .five,
+    .six {
+      background-color: gray;
+      padding: 5px;
     }
-  body{
-    margin:0px;
-    height : 100%;
-  }
-  .odd{
-    background-color: yellow;
-  }
+
+    body {
+      margin: 0px;
+      height: 100%;
+    }
+
+    .odd {
+      background-color: yellow;
+    }
   </style>
-</head> 
-<body> 
-  <grid layout="splitting(30,12,12)"> 
-   <div class="one" id="first">
-     One 
-   </div>  
-   <div class="odd" id="test">
-     two 
-   </div>
-   <div class="one">
-     three 
-   </div> 
-   <div class="odd" id="test2">
-     four
-   </div>
-   <div class="one">
-     One 
-   </div>  
-   <div class="odd" id="test">
-     two 
-   </div>
-   <div class="one">
-     three 
-   </div> 
-   <div class="odd" id="test2">
-     four
-   </div>
-  </grid> 
+</head>
+
+<body>
+  <grid layout="splitting(30,12,12)">
+    <div class="one" id="first">
+      One
+    </div>
+    <div class="odd" id="test">
+      two
+    </div>
+    <div class="one">
+      three
+    </div>
+    <div class="odd" id="test2">
+      four
+    </div>
+    <div class="one">
+      One
+    </div>
+    <div class="odd" id="test">
+      two
+    </div>
+    <div class="one">
+      three
+    </div>
+    <div class="odd" id="test2">
+      four
+    </div>
+  </grid>
   <p id="testing">jgjfgj</p>
   <p id="testing2">jgjfgj</p>
 
 
-<p id="demo"></p>
+  <p id="demo"></p>
 
-<script>
-var main = document.getElementsByTagName("grid")[0];
-main.style.display = "grid";
+  <script>
+    var main = document.getElementsByTagName("grid")[0];
+    main.style.display = "grid";
 
-const vp = ["vw","vh"];
-const dirKey = [ "perpendicular", "parallel","both", "none"];
-const units = ["vh","%","em"];
-const baseNums = [38.2,61.8,100,1.618,0];
-const layNames = ["split1","split2","direction","rotation", "modify","clear"];
+    const vp = ["vw", "vh"];
+    const dirKey = ["perpendicular", "parallel", "both", "none"];
+    const units = ["vh", "%", "em"];
+    const baseNums = [38.2, 61.8, 100, 1.618, 0];
+    const layNames = ["split1", "split2", "direction", "rotation", "modify", "clear"];
 
-const verGrids = [];
-const horGrids = [];
-const gridLines = []
+    const ratio = 1.618;
+    const parent = 100;
+    const lg = 61.2;
+    const sm = 38.8;
 
-const ratio = 1.618;
-const parent = 100;
-const lg =  61.2;
-const sm = 38.8;
+    const verGrids = [];
+    const horGrids = [];
+    const gridLines = []
 
-var arr = [];
+    grid = (value) => {
+      Object.values(value).map((element, index, array) => {
+        if (array[2] == 'perpendicular' && typeof element !== 'string') {
+          if(typeof element == 'object'){
+            let getValues = Object.values(element).slice(0,2);
+            if(getValues.every((currentValue) => !isNaN(currentValue))){
+              getValues.reduce((sum,num) => verGrids.push(sum+num))
+            }
+            grid(element)
+          }
+          else{
+            verGrids.push(element)
+          }
+        }
+        if (array[2] == 'parallel' && typeof element !== 'string') {
+          if(typeof element == 'object'){
+            let getValues = Object.values(element).slice(0,2);
+            if(getValues.every((currentValue) => !isNaN(currentValue))){
+              getValues.reduce((sum,num) => verGrids.push(sum+num))
+            }
+            grid(element)
+          }
+          else{
+            horGrids.push(element)
+          }
+          
+        }
+      })
+    }
 
-Object.prototype.arngGrid = function(){
- return arr.push(this);
-}
+    Number.prototype.splits = function (a, b, c) {
+      let result = {};
+      for (var i = 0; i < arguments.length; i++) {
+        result[layNames[i]] = (!isNaN(arguments[i]) ? (Math.round(this * arguments[i] * 1) / 100) : arguments[i]);
+      }
+      return result;
+    }
 
-Number.prototype.splits = function(a,b,c){
-  let result = {};
-  for (var i = 0; i < arguments.length; i++) {
-    result[i] = (Number.isInteger(arguments[i])? this * arguments[i]:arguments[i]);
-  }
-result.arngGrid()
-}
+    var k = (100).splits(lg.splits(lg,sm,"parallel"), sm.splits(lg, sm, "parallel"), "perpendicular");
+    grid(k)
+    console.log(verGrids, horGrids)
+    main.style.gridTemplateColumns = verGrids.toString().replace(",", " ");
+    main.style.gridTemplateRows = horGrids.toString().replace(",", " ")
 
-var k = (100).splits(lg,sm.splits(lg.splits(lg,sm,"perpendicular1"),sm.splits(lg,sm,"parallel1"),"parallel"),"perpendicular");
 
-</script>
+    console.log(k)
+  </script>
 
 </body>
+
 </html>
