@@ -9,7 +9,7 @@
     .four,
     .five,
     .six {
-      background-color: gray;
+      background-color: rgb(235, 137, 46);
       padding: 5px;
     }
 
@@ -19,7 +19,7 @@
     }
 
     .odd {
-      background-color: yellow;
+      background-color: rgb(17, 122, 26);
     }
   </style>
 </head>
@@ -62,10 +62,13 @@
     main.style.display = "grid";
 
     const vp = ["vw", "vh"];
-    const dirKey = ["perpendicular", "parallel", "both", "none"];
+    const directionKeywords = ["perpendicular", "parallel", "both", "none"];
     const units = ["vh", "%", "em"];
     const baseNums = [38.2, 61.8, 100, 1.618, 0];
-    const layNames = ["split1", "split2", "direction", "rotation", "modify", "clear"];
+    const functionOrder = ["split1", "split2", "direction", "rotation", "modify", "clear"];
+    const gridKeywords = ['verGrids', 'horGrids']
+    const perpendicular = 0;
+    const parallel = 1;
 
     const ratio = 1.618;
     const parent = 100;
@@ -78,50 +81,69 @@
 
     grid = (value) => {
       Object.values(value).map((element, index, array) => {
-        if (array[2] == 'perpendicular' && typeof element !== 'string') {
-          if(typeof element == 'object'){
-            let getValues = Object.values(element).slice(0,2);
-            if(getValues.every((currentValue) => !isNaN(currentValue))){
-              getValues.reduce((sum,num) => verGrids.push(sum+num))
+        for (let i = 0; i < directionKeywords.length; i++) {
+          if (array[2] == directionKeywords[i] && typeof element !== 'string') {
+            if (typeof element == 'object') {
+              let getValues = Object.values(element).slice(0, 2);
+              if (getValues.every((currentValue) => !isNaN(currentValue))) {
+                getValues.reduce((sum, num) => verGrids.push(sum + num))
+              }
+              grid(element)
             }
-            grid(element)
-          }
-          else{
-            verGrids.push(element)
-          }
-        }
-        if (array[2] == 'parallel' && typeof element !== 'string') {
-          if(typeof element == 'object'){
-            let getValues = Object.values(element).slice(0,2);
-            if(getValues.every((currentValue) => !isNaN(currentValue))){
-              getValues.reduce((sum,num) => verGrids.push(sum+num))
+            else {
+              gridKeywords[i].push(element)
             }
-            grid(element)
           }
-          else{
-            horGrids.push(element)
-          }
-          
         }
       })
     }
 
     Number.prototype.splits = function (a, b, c) {
+      let sum = parseFloat(this);
+      if (arguments[2] == 'perpendicular') {
+        this.left = (a instanceof Object ? a : (Math.round(arguments[0] * sum * 1) / 100))
+        this.right = (b instanceof Object ? b : (Math.round(arguments[1] * sum * 1) / 100))
+      }
+      if (arguments[2] == 'parallel') {
+        this.left = (a instanceof Object ? a : (Math.round(arguments[0] * sum * 1) / 100))
+        this.right = (b instanceof Object ? b : (Math.round(arguments[1] * sum * 1) / 100))
+      }
+      this.direction = arguments[2];
+      console.log(this)
       let result = {};
       for (var i = 0; i < arguments.length; i++) {
-        result[layNames[i]] = (!isNaN(arguments[i]) ? (Math.round(this * arguments[i] * 1) / 100) : arguments[i]);
+        result[functionOrder[i]] = (!isNaN(arguments[i]) ? (Math.round(this * arguments[i] * 1) / 100) : arguments[i]);
       }
-      return result;
+      console.log(result)
+      /* let split = {
+         vertical: [sum, sum, "perpendicular"],
+         horizontal: [sum, sum, "parallel"],
+         insert: function (left, right, direction) {
+           if (direction == 'perpendicular') {
+             this.vertical.splice(0, 2, left, right)
+             Object.assign({}, split.vertical)
+           }
+           if (direction == 'parallel') {
+             this.horizontal.splice(0, 2, left, right)
+             return Object.assign({}, split.horizontal)
+           }
+ 
+         }
+       }
+       */
+      return this
     }
 
-    var k = (100).splits(lg.splits(lg,sm,"parallel"), sm.splits(lg, sm, "parallel"), "perpendicular");
-    grid(k)
-    console.log(verGrids, horGrids)
-    main.style.gridTemplateColumns = verGrids.toString().replace(",", " ");
-    main.style.gridTemplateRows = horGrids.toString().replace(",", " ")
 
+    var k = (100).splits(lg, sm.splits(lg.splits(lg, sm, "perpendicular"), sm.splits(lg, sm, "parallel"), "parallel"), "perpendicular");
+    //var k = (100).splits(lg,sm, "perpendicular");
 
-    console.log(k)
+    //grid(k)
+    //console.log(sumsVerti, sumsHori)
+    //console.log(verGrids, horGrids)
+    //main.style.gridTemplateColumns = verGrids.toString().replace(",", " ");
+    //main.style.gridTemplateRows = horGrids.toString().replace(",", " ")
+//console.log(k)
   </script>
 
 </body>

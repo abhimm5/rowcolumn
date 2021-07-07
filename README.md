@@ -1,2 +1,2 @@
 # Physheet
- simple javascript framework/library to ceate beautiful websites easily
+ Simple javascript framework/library to create beautiful websites effortlessly.
