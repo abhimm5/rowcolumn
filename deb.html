@@ -65,7 +65,7 @@
     const directionKeywords = ["perpendicular", "parallel", "both", "none"];
     const units = ["vh", "%", "em"];
     const baseNums = [38.2, 61.8, 100, 1.618, 0];
-    const functionOrder = ["split1", "split2", "direction", "rotation", "modify", "clear"];
+    const functionOrder = ["left", "right", "direction", "rotation", "modify", "clear"];
     const gridKeywords = ['verGrids', 'horGrids']
     const perpendicular = 0;
     const parallel = 1;
@@ -98,46 +98,41 @@
       })
     }
 
+    Object.prototype.toGrid = function () {
+      let mainObject = {};
+      let master = this.master
+      delete this.master
+      console.log(this,master)
+      for (const key in this){
+        if(this[key] instanceof Object && !(this[key] instanceof Function)){
+          this[key].toGrid()
+        }
+      }
+     
+      return mainObject
+    }
+
+
     Number.prototype.splits = function (a, b, c) {
+      // (6969).splits() returns all this, Mandatory parameter pass.
+      if(!a||!b||!c){
+        throw 'Parameter missing';
+      }
       let sum = parseFloat(this);
-      if (arguments[2] == 'perpendicular') {
-        this.left = (a instanceof Object ? a : (Math.round(arguments[0] * sum * 1) / 100))
-        this.right = (b instanceof Object ? b : (Math.round(arguments[1] * sum * 1) / 100))
-      }
-      if (arguments[2] == 'parallel') {
-        this.left = (a instanceof Object ? a : (Math.round(arguments[0] * sum * 1) / 100))
-        this.right = (b instanceof Object ? b : (Math.round(arguments[1] * sum * 1) / 100))
-      }
+      this.left =  arguments[0];
+      this.right =  arguments[1];
       this.direction = arguments[2];
-      console.log(this)
-      let result = {};
+      this.master = {}
       for (var i = 0; i < arguments.length; i++) {
-        result[functionOrder[i]] = (!isNaN(arguments[i]) ? (Math.round(this * arguments[i] * 1) / 100) : arguments[i]);
+        this.master[functionOrder[i]] = (!isNaN(arguments[i]) ? arguments[i] * 1 : arguments[i]);
       }
-      console.log(result)
-      /* let split = {
-         vertical: [sum, sum, "perpendicular"],
-         horizontal: [sum, sum, "parallel"],
-         insert: function (left, right, direction) {
-           if (direction == 'perpendicular') {
-             this.vertical.splice(0, 2, left, right)
-             Object.assign({}, split.vertical)
-           }
-           if (direction == 'parallel') {
-             this.horizontal.splice(0, 2, left, right)
-             return Object.assign({}, split.horizontal)
-           }
- 
-         }
-       }
-       */
       return this
     }
 
 
-    var k = (100).splits(lg, sm.splits(lg.splits(lg, sm, "perpendicular"), sm.splits(lg, sm, "parallel"), "parallel"), "perpendicular");
+    var k = (100).splits(lg, sm.splits(lg.splits(lg, sm, "perpendicular1"), sm.splits(lg, sm, "parallel1"), "parallel"), "perpendicular");
     //var k = (100).splits(lg,sm, "perpendicular");
-
+    console.log(k.toGrid())
     //grid(k)
     //console.log(sumsVerti, sumsHori)
     //console.log(verGrids, horGrids)
