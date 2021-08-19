@@ -3,25 +3,25 @@
 
 <head>
   <style type="text/css" id="dcoder_stylesheet">
-    .one,
-    .two,
-    .three,
-    .four,
-    .five,
-    .six {
-      background-color: rgb(235, 137, 46);
-      padding: 5px;
-    }
+  .one,
+  .two,
+  .three,
+  .four,
+  .five,
+  .six {
+    background-color: rgb(235, 137, 46);
+    padding: 5px;
+  }
 
-    body {
-      margin: 0px;
-      height: 100%;
-    }
+  body {
+    margin: 0px;
+    height: 100%;
+  }
 
-    .odd {
-      background-color: rgb(17, 122, 26);
-    }
-  </style>
+  .odd {
+    background-color: rgb(17, 122, 26);
+  }
+</style>
 </head>
 
 <body>
@@ -58,6 +58,13 @@
   <p id="demo"></p>
 
   <script>
+        Object.prototype.isMaterial = function (param) {
+      return param.constructor === Object ? true : false;
+    }
+    String.prototype.isString = function (param) {
+      return param.constructor === String ? true : false;
+    }
+
     var main = document.getElementsByTagName("grid")[0];
     main.style.display = "grid";
 
@@ -101,34 +108,25 @@
 
     Object.prototype.toGrid = function () {
       let mainObject = {};
-      let refObject = [];
-      function addRef(left, right, direction){
-         
-      }
-      let primitiveValue = this.valueOf()
+      let reference = [];
+      const primitiveValue = this.valueOf()
       let master = this.master
       let masterLeft = master.left * primitiveValue;
       let masterRight = master.right * primitiveValue;
+      let layout = {vetical:[],horizontal:[]}
       delete this.master
-      console.log(masterLeft,masterRight)
       for (const key in this) {
         if (this[key] instanceof Object && !(this[key] instanceof Function)) {
           this[key].toGrid()
         }
         if (!isNaN(this[key]) && !(this[key] instanceof Object)) {
-          //console.log(this[key])
         }
       }
       return mainObject
     }
 
-
     Number.prototype.splits = function (a, b, c) {
-      // (6969).splits() returns all this, Mandatory parameter pass.
-      if (!a || !b || !c) {
-        throw 'Parameter missing';
-      }
-      let sum = parseFloat(this);
+      // (6969).splits() returns all this. Mandatory parametre pass.
       this.left = arguments[0];
       this.right = arguments[1];
       this.direction = arguments[2];
@@ -136,22 +134,24 @@
       for (var i = 0; i < arguments.length; i++) {
         this.master[functionOrder[i]] = (!isNaN(arguments[i]) ? arguments[i] * 1 : arguments[i]);
       }
+      console.log(this)
       return this
     }
 
 
-    var k = (100).splits(lg, sm.splits(lg.splits(lg, sm, "perpendicular"), sm.splits(lg, sm, "parallel"), "parallel"), "perpendicular");
+    var k = (100).splits(lg, sm.splits(lg.splits(77, 88, "perpendicular"), sm.splits(23, 54, "parallel"), "parallel"), "perpendicular");
     //var k = (100).splits(lg,sm, "perpendicular");
-    console.log(k.toGrid())
-    console.log(k)
+   k.toGrid()   
+   console.log(k)
+   document.getElementById("demo").innerHTML = 124
 
     //grid(k)
     //console.log(sumsVerti, sumsHori)
     //console.log(verGrids, horGrids)
     //main.style.gridTemplateColumns = verGrids.toString().replace(",", " ");
     //main.style.gridTemplateRows = horGrids.toString().replace(",", " ")
-//console.log(k)
-  </script>
+console.log(Object.isMaterial({}))
+</script>
 
 </body>
 

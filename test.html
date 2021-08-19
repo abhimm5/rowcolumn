@@ -1,0 +1,108 @@
+<script>
+  let v = ['61.2%', '38.8%']
+  let h = ['61.2vh', '38.8vh']
+  let vtotal = v.length + 1
+  let htotal = h.length + 1
+
+  let priVal = 100
+
+  Object.prototype.isObject = function (param) {
+    if (!param) { return }
+    return param.constructor === Object ? true : false;
+  }
+
+  String.prototype.isString = function (param) {
+    if (!param) { return }
+    return param.constructor === String ? true : false;
+  }
+
+  const ratio = 1.618;
+  const parent = 100;
+  const lg = 61.2;
+  const sm = 38.8;
+
+  const vp = ["vw", "vh"];
+  const directionKeywords = ["perpendicular", "parallel", "both", "none"];
+  const units = ["vh", "%", "em"];
+  const baseNums = [38.2, 61.8, 100, 1.618, 0];
+  const functionOrder = ["left", "right", "direction", "rotation", "modify", "clear"];
+  const gridKeywords = ['verGrids', 'horGrids']
+  const perpendicular = 0;
+  const parallel = 1;
+
+  Number.prototype.splits = function (a, b, c) {
+    if (!arguments) { return }
+    this.left = arguments[0];
+    this.right = arguments[1];
+    this.direction = arguments[2];
+    this.master = {}
+    for (var i = 0; i < arguments.length; i++) {
+      this.master[functionOrder[i]] = (!isNaN(arguments[i]) ? arguments[i] * 1 : arguments[i]);
+    }
+    return this
+  }
+
+
+  class layout {
+    constructor(a) {
+      this.primaryNumber = a
+      this.composition = {}
+      this.axisContainer = {}
+      this.axisContainer.xAxis = { left: a, right: a, direction: "perpendicular" }
+      this.axisContainer.yAxis = { left: a, right: a, direction: "parallel" }
+      this.composition.master = this.axisContainer;
+    }
+    compose(object, gridName, axis) {
+      //console.log(splitName)
+      let toArray = Object.values(object)
+      let master = toArray.pop()
+      const nesting = (splitValue) => {
+        toArray.map((item, index, array) => {
+          if (Number.isFinite(item)) {
+            if (splitValue == null) {
+              if (index == 0) {
+                this.composition.left = item
+              }
+              if (index == 1) {
+                this.composition.right = item
+              }
+            }
+            if (splitValue) {
+              console.log(splitValue)
+              if (index == 0) {
+                this.composition.right.left = item
+              }
+              if (index == 1) {
+                this.composition.right.right = item
+              }
+            }
+          }
+          if (item instanceof Object) {
+            index == 0? index = 'left' : index = 'right';
+            this.compose(item, index)
+          }
+        })
+      }
+      const setDirect = () => {
+        this.composition.direction = toArray.pop()
+        nesting();
+      }
+      const makeNest = (gridName) => {
+        this.composition.gridName = {};
+        this.composition.gridName.direction = toArray.pop()
+        nesting(gridName);
+      }
+      gridName == null ? setDirect() : makeNest(gridName);
+      //console.log(toArray)
+      console.log(this.composition)
+    }
+
+  }
+
+  var k = new layout(priVal)
+
+  let composeObject = (100).splits(lg, sm.splits(lg, sm, "parallel"), "perpendicular")
+  k.compose(composeObject)
+  k.composition
+
+</script>
