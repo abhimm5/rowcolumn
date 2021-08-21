@@ -53,7 +53,7 @@
       this.composition.master = this.axisContainer;
     }
     compose(object, gridName, axis) {
-      //console.log(splitName)
+      //console.log(gridName)
       let toArray = Object.values(object)
       let master = toArray.pop()
       const nesting = (splitValue) => {
@@ -68,12 +68,11 @@
               }
             }
             if (splitValue) {
-              console.log(splitValue)
               if (index == 0) {
-                this.composition.right.left = item
+                this.composition[splitValue].left = item
               }
               if (index == 1) {
-                this.composition.right.right = item
+                this.composition[splitValue].right = item
               }
             }
           }
@@ -88,8 +87,10 @@
         nesting();
       }
       const makeNest = (gridName) => {
-        this.composition.gridName = {};
-        this.composition.gridName.direction = toArray.pop()
+        let nestedSyntax = "this.composition." + gridName 
+        console.log(nestedSyntax)
+        eval(nestedSyntax + " = {}")
+        this.composition[gridName].direction = toArray.pop()
         nesting(gridName);
       }
       gridName == null ? setDirect() : makeNest(gridName);
