@@ -1,28 +1,22 @@
 <!DOCTYPE html>
 <html>
-
 <head>
   <style type="text/css" id="dcoder_stylesheet">
     .grid-container>div {
       border: 1px solid #333;
     }
-
     body {
       margin: 0;
       padding: 0;
     }
   </style>
 </head>
-
 <body>
-
   <div class="grid-container" id="grid-container">
     <div>1</div>
     <div>2</div>
     <div>3</div>
   </div>
-
-
   <script>
     Object.prototype.isMaterial = function (param) {
       if (!param) { return }
@@ -63,7 +57,7 @@
     const lg = 61.2;
     const sm = 38.8;
 
-    //Grid system takes values from layout class to set values of Modern CSS Grid system. 
+    //Grid class takes values from layout class to set values of Modern CSS Grid system. 
     class grid {
       constructor(parent, x, y) {
         this.gridParent = document.getElementById(parent);
@@ -81,14 +75,14 @@
       }
     }
 
-    //Layout class processes converted 2D objects  
+    //Layout class processes converted 2D objects.  
     class layout {
       constructor(material2D) {
 
         //assigning this value
         [this.primitive, this.left, this.right, this.direction, this.master] = Object.values(material2D)
 
-        //re-defining with length units
+        //re-defining with length units '% and vh'.
         let perpendicular = this.primitive + "%";
         let parallel = this.primitive + "vh";
        
@@ -158,21 +152,17 @@
       }
     }
 
-    //To change the syntax of main selected object into two dimenstional object of the grid.
+    //To convert the syntax of main selected object into two dimenstional object of the grid.
     class construct2D {
       constructor(material1D){
         [this.left, this.right, this.direction, this.master] = Object.values(material1D);
         this.material2D = {};
       }
       parallel(value){
-        this.x ="abc"
       }
       perpendicular(value){
-        console.log(this.x)
       }
-
       dimension2d(){
-        this.perpendicular()
         let master = this
         for(const key in this){
           if(!(this[key] instanceof Function)){

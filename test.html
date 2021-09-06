@@ -1,21 +1,11 @@
-<script>
+<script type="text/javascript">
+
   let v = ['61.2%', '38.8%']
   let h = ['61.2vh', '38.8vh']
   let vtotal = v.length + 1
   let htotal = h.length + 1
 
   let priVal = 100
-
-  Object.prototype.isObject = function (param) {
-    if (!param) { return }
-    return param.constructor === Object ? true : false;
-  }
-
-  String.prototype.isString = function (param) {
-    if (!param) { return }
-    return param.constructor === String ? true : false;
-  }
-
   const ratio = 1.618;
   const parent = 100;
   const lg = 61.2;
@@ -32,9 +22,7 @@
 
   Number.prototype.splits = function (a, b, c) {
     if (!arguments) { return }
-    this.left = arguments[0];
-    this.right = arguments[1];
-    this.direction = arguments[2];
+    [this.left, this.right, this.direction] = arguments;
     this.master = {}
     for (var i = 0; i < arguments.length; i++) {
       this.master[functionOrder[i]] = (!isNaN(arguments[i]) ? arguments[i] * 1 : arguments[i]);
@@ -42,68 +30,89 @@
     return this
   }
 
-
   class layout {
     constructor(a) {
-      this.primaryNumber = a
-      this.composition = {}
-      this.axisContainer = {}
-      this.axisContainer.xAxis = { left: a, right: a, direction: "perpendicular" }
-      this.axisContainer.yAxis = { left: a, right: a, direction: "parallel" }
-      this.composition.master = this.axisContainer;
+      this.primaryNumber = a;
+      this.composition = new Array;
+      this.axisContainer = new Object;
+      this.current = new Object;
+      this.axisContainer.xAxis = { left: a, right: a, direction: "perpendicular" };
+      this.axisContainer.yAxis = { left: a, right: a, direction: "parallel" };
     }
-    compose(object, gridName, axis) {
-      //console.log(gridName)
-      let toArray = Object.values(object)
-      let master = toArray.pop()
-      const nesting = (splitValue) => {
-        toArray.map((item, index, array) => {
-          if (Number.isFinite(item)) {
-            if (splitValue == null) {
-              if (index == 0) {
-                this.composition.left = item
-              }
-              if (index == 1) {
-                this.composition.right = item
-              }
-            }
-            if (splitValue) {
-              if (index == 0) {
-                this.composition[splitValue].left = item
-              }
-              if (index == 1) {
-                this.composition[splitValue].right = item
-              }
-            }
-          }
-          if (item instanceof Object) {
-            index == 0? index = 'left' : index = 'right';
-            this.compose(item, index)
-          }
-        })
-      }
-      const setDirect = () => {
-        this.composition.direction = toArray.pop()
-        nesting();
-      }
-      const makeNest = (gridName) => {
-        let nestedSyntax = "this.composition." + gridName 
-        console.log(nestedSyntax)
-        eval(nestedSyntax + " = {}")
-        this.composition[gridName].direction = toArray.pop()
-        nesting(gridName);
-      }
-      gridName == null ? setDirect() : makeNest(gridName);
-      //console.log(toArray)
-      console.log(this.composition)
+    placing(direction,material){
+      let obj = new Object;
+      let redefine  = (arr, key, anyVal) => arr.find(o => Object.values(o).includes(anyVal))?.[key]
+      obj.left = (material.left instanceof Object)? obj.left = undefined:obj.left = redefine(material.axis,'left',material.direction)
+      obj.right = (material.right instanceof Object)? obj.right = undefined:obj.right = redefine(material.axis,'right',material.direction)
+      obj.direction = material.direction
+      this.composition.push(obj);
     }
-
+    compose(object, gridValue, tracker) {
+      let parentVal = object.valueOf(),axis;
+      const { master, splits, isObject, ...spliced } = object;
+      if(this.primaryNumber==parentVal){
+        axis = this.axisContainer;
+        let left,right;
+        object.master.left = (Math.round(parentVal * object.master.left) / 100)
+        object.master.right = (Math.round(parentVal * object.master.right) / 100)
+        if(object.direction=="perpendicular"){
+          axis.xAxis = object.master
+        }
+        if(object.direction=="parallel"){
+          axis.yAxis = object.master
+        }
+        object.axis = Object.values(axis)
+      } 
+      else{
+        axis = Object.assign({},object.axis);
+        object.master.left = (Math.round(gridValue * object.master.left) / 100)
+        object.master.right = (Math.round(gridValue * object.master.right) / 100)
+        if(object.direction=="perpendicular"){
+          axis[0] = object.master
+        }
+        if(object.direction=="parallel"){
+          axis[1] = object.master
+        }
+        object.axis = Object.values(axis)
+      }
+      this.placing(object.direction,object)
+      for(let key in spliced){        
+        if(spliced[key] instanceof Object&& !Array.isArray(spliced[key])){
+          spliced[key].axis = object.axis
+          //console.log(object[key])
+          let find = (direction,gridName) => {
+            let value;
+            if(direction == 'perpendicular'){
+              gridName == 'left'?value = object.axis[0].left:value = object.axis[0].right
+            }
+            if(direction == 'parallel'){
+              gridName == 'left'?value = object.axis[1].left:value = object.axis[1].right
+            }
+            return value
+          }
+          this.compose(spliced[key],find(object[key].direction,key))
+        }
+      }
+      return this.composition
+    }
   }
 
-  var k = new layout(priVal)
-
-  let composeObject = (100).splits(lg, sm.splits(lg, sm, "parallel"), "perpendicular")
+  var k = new layout(100)
+  let composeObject = (100).splits(lg.splits(lg,sm,'perpendicular'), sm.splits(lg, sm.splits(lg,sm,'perpendicular'), "parallel"), "perpendicular")
   k.compose(composeObject)
   k.composition
+
+  function tree(array) {
+    let obj = array.shift();
+    for (let [key, value] of Object.entries(obj)){
+      if (value === undefined){
+        obj[key] = tree(array);
+      }
+    }
+    return obj;
+  }
+
+console.log(tree(k.composition));
+console.log((100).splits(lg.splits(lg,sm,'perpendicular'), sm.splits(lg, sm.splits(lg,sm,'perpendicular'), "parallel"), "perpendicular"))
 
 </script>
