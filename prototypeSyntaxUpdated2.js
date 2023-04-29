@@ -73,7 +73,7 @@ Grid.prototype.assignCoordinate = function(item, coordinates) {
     const parent = this.valueOf()
     const left = Math.round((parent/sum * Number(this.left)))
     const right =  Math.round((parent/sum * Number(this.right)))
-    let myAxis,myPoint;
+    let myAxis;
 
     function reviseAxis(axis,value,direction,extras){
       axis.map(getParent =>{
@@ -91,29 +91,15 @@ Grid.prototype.assignCoordinate = function(item, coordinates) {
       return axis
     }
 
-    function restructure(primaryValue,left,right,direction){
-    //console.log(left)
-    let x = { left: primaryValue, right: primaryValue, direction: "perpendicular"}
-    let y = { left: primaryValue, right: primaryValue, direction: "parallel" }
-    if(direction == "perpendicular"){
-      x = { left: left, right: right, direction: "perpendicular"}
-    }
-    if(direction == "parallel"){
-      y = { left: left, right: right, direction: "parallel"}
-    }
-    return [x,y]
-  }
-
     function revisePoint(point,value,direction){
-      if(direction == "perpendicular"){
-       point[0].x =  value
-      }
-      if(direction == "parallel"){
-        point[0].y = value
-      }
-      return [JSON.parse(JSON.stringify(point[0]))]
+        if(direction == "perpendicular"){
+         point[0].x = point[0].x + value
+        }
+        if(direction == "parallel"){
+          point[0].y = point[0].y + value
+        }
+      return point
     }
-
 
     if(axis){
       let a = axis
@@ -121,22 +107,17 @@ Grid.prototype.assignCoordinate = function(item, coordinates) {
     }
     else{
       let a  = [{ left: sum, right: sum, direction: "perpendicular" }, { left: sum, right: sum, direction: "parallel" }]
-      myAxis = restructure(left+right,left,right,this.direction)
+      myAxis = reviseAxis(a,undefined,'perpendicular',[left,right])
     }
-
     if(point){
-      myPoint = point
+      this.splitPoint = [{x:0,y:0}]
     }
     else{
-      let p = [{x:0,y:0}]
-      myPoint = revisePoint(p,left,this.direction)
+      this.splitPoint = [{x:0,y:0}]
+      revisePoint(this.splitPoint,left,this.direction)
+
     }
-   
-    
-    this.point = JSON.parse(JSON.stringify(myPoint))
-
-    //console.log(this.point)
-
+    console.log(this.splitPoint)
     let raxis = JSON.parse(JSON.stringify(myAxis))
     let rectangles = reviseAxis(raxis,undefined,this.direction,[left,right])
     let leftRectangle = {width:rectangles[0].left,height:rectangles[1].left}
@@ -150,19 +131,13 @@ Grid.prototype.assignCoordinate = function(item, coordinates) {
         let yl = getParallel.left.splits((this.left.left),(this.left.right),this.left.direction) 
         let newAxisX = [{ left: Number(left)  , right: Number(right) , direction: "perpendicular" },getParallel]
         let newAxisY = [getPerpendicular,{ left: Number(left), right: Number(right), direction: "parallel" }]
-        let nax = JSON.parse(JSON.stringify(newAxisX))
-        let nay = JSON.parse(JSON.stringify(newAxisY))
-        let newPointX = JSON.parse(JSON.stringify(xl.rearrange(nax).point))
-        let newPointY = JSON.parse(JSON.stringify(yl.rearrange(nay).point))
         if(this.left.direction !== this.direction && this.left.direction == 'perpendicular'){
-          let revisedAxis = reviseAxis(newAxisX,left,this.left.direction)
-          let revisedPoint = revisePoint([{x:0,y:0}],JSON.parse(JSON.stringify(xl.rearrange(nax).point[0].x)) ,this.left.direction)
-          this.left = xl.rearrange(revisedAxis,revisedPoint)
+          let revisedAxis = reviseAxis(newAxisX,left,this.direction)
+          this.left = xl.rearrange(revisedAxis)
         }
         else if(this.left.direction !== this.direction && this.left.direction == 'parallel'){
-          let revisedAxis = reviseAxis(newAxisY,left,this.left.direction)
-          let revisedPoint = revisePoint([{x:0,y:0}],JSON.parse(JSON.stringify(yl.rearrange(nay).point[0].y)) ,this.left.direction)
-          this.left = yl.rearrange(revisedAxis,revisedPoint)
+          let revisedAxis = reviseAxis(newAxisY,left,this.direction)
+          this.left = yl.rearrange(revisedAxis)
         }
         else{
           this.left = this.left.direction == 'perpendicular'? xl.rearrange(newAxisX):yl.rearrange(newAxisY)
@@ -172,34 +147,27 @@ Grid.prototype.assignCoordinate = function(item, coordinates) {
         this.left = dimension[0]
       }
       if(typeof this.right == 'object'){
-        
         let xr = getPerpendicular.right.splits((this.right.left),(this.right.right),this.right.direction)
         let yr = getParallel.right.splits((this.right.left),(this.right.right),this.right.direction)
         let newAxisX = [{ left: Number(left), right: Number(right), direction: "perpendicular" },getParallel]
         let newAxisY = [getPerpendicular,{ left: Number(left), right: Number(right), direction: "parallel" }]
-        let nax = JSON.parse(JSON.stringify(newAxisX))
-        let nay = JSON.parse(JSON.stringify(newAxisY))
-        let newPointX = revisePoint(myPoint,left + JSON.parse(JSON.stringify(xr.rearrange(nax).left)) ,this.direction)
-        let newPointY = revisePoint(myPoint,left + JSON.parse(JSON.stringify(yr.rearrange(nay).left))  ,this.direction)
         if(this.right.direction !== this.direction && this.right.direction == 'perpendicular'){
-          let revisedAxis = reviseAxis(newAxisX,right,this.right.direction)
-          let revisedPoint = revisePoint(JSON.parse(JSON.stringify(this.point)),JSON.parse(JSON.stringify(xr.rearrange(nax).point[0].x)) ,this.right.direction)
-          this.right = xr.rearrange(revisedAxis,revisedPoint)
+          let revisedAxis = reviseAxis(newAxisX,right,this.direction)
+          this.right = xr.rearrange(revisedAxis)
         }
         else if(this.right.direction !== this.direction && this.right.direction == 'parallel'){
-          let revisedAxis = reviseAxis(newAxisY,right,this.right.direction)
-          let revisedPoint = revisePoint(JSON.parse(JSON.stringify(this.point)),JSON.parse(JSON.stringify(yr.rearrange(nay).point[0].y)) ,this.right.direction)
-          this.right = yr.rearrange(revisedAxis,revisedPoint)
+          let revisedAxis = reviseAxis(newAxisY,right,this.direction)
+          this.right = yr.rearrange(revisedAxis)
         }
         else{
-          this.right = this.right.direction == 'perpendicular'? xr.rearrange(newAxisX,newPointX):yr.rearrange(newAxisY,newPointY)
+          this.right = this.right.direction == 'perpendicular'? xr.rearrange(newAxisX):yr.rearrange(newAxisY)
         }  
       }
       else{
         this.right = dimension[1]
       }
     if (this.direction !== 'perpendicular' && Number(this)== 100) {
-     // assignCoordinates(this)
+      assignCoordinates(this)
       //console.log(this)
     }
     if (this.direction == 'perpendicular' && leftRectangle.height == 100 && rightRectangle.height == 100){
@@ -282,10 +250,7 @@ Grid.prototype.assignCoordinate = function(item, coordinates) {
   let test7 = (100).splits(lg.splits(lg.splits(lg,sm.splits(sm,lg,'perpendicular') ,'parallel'),sm ,'perpendicular'), sm.splits(sm,lg,'parallel'),'perpendicular')
   let test8 = (100).splits(lg.splits(lg,sm,'perpendicular'), sm.splits(lg,sm ,'perpendicular') ,'perpendicular') //all one direction
   let test9 = (100).splits(lg.splits(sm,lg,'parallel'),sm.splits(lg,sm.splits(lg,sm,'perpendicular'),'parallel'),'perpendicular')
-
-
-  console.log((100).splits(lg.splits(lg,sm,'parallel'), sm.splits(lg,sm ,'perpendicular') ,'perpendicular').rearrange())
-
+  console.log(test2.rearrange())
   let case1 = (100).splits(lg.splits(lg,sm ,'perpendicular'), sm.splits(lg,sm ,'parallel'),'perpendicular')
   //test7.rearrange().layout()
         </script>

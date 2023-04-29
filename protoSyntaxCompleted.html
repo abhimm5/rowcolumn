@@ -1,0 +1,177 @@
+<!DOCTYPE html>
+<html>
+    <head>
+        <style id="dcoder_stylesheet" type="text/css">
+            .grid-container>div {
+      border: 1px solid #ccc;
+    }
+    body {
+      margin: 0;
+      padding: 0;
+    }
+        </style>
+    </head>
+    <body>
+        <div class="grid-container" id="grid-container" layout="(100).splits(lg.splits(lg.splits(lg,sm.splits(sm,lg,'perpendicular') ,'parallel'),sm ,'perpendicular'), sm.splits(sm,lg,'parallel'),'perpendicular')">
+            <div>
+                1
+            </div>
+            <div>
+                2
+            </div>
+            <div>
+                3
+            </div>
+            <div>
+                4
+            </div>
+        </div>
+        <script type="text/javascript">
+            let parent = 100;
+  let lg = 61.2;
+  let sm = 38.8;
+function Grid(parent) {
+  this.gridParent = parent;
+  this.gridParent.style.display = "grid";
+}
+
+Grid.prototype.cartesianSystem = function(x, y) {
+  function addUnits(array, units) {
+    const iterator = array.values();
+    const newarr = [];
+    for (const value of iterator) {
+      newarr.push(value + units);
+    }
+    return newarr.join(" ");
+  }
+  this.gridParent.style.gridTemplateColumns = addUnits(x, "%");
+  this.gridParent.style.gridTemplateRows = addUnits(y, "vh");
+};
+
+Grid.prototype.assignCoordinate = function(item, coordinates) {
+  let [x1, y1, x2, y2] = coordinates;
+  this.getGridBox = item;
+  this.getGridBox.style.gridRowStart = x1;
+  this.getGridBox.style.gridColumnStart = y1;
+  this.getGridBox.style.gridRowEnd = x2;
+  this.getGridBox.style.gridColumnEnd = y2;
+  this.getGridBox.style.color = "red";
+};
+  function restructure(primaryValue,left,right,direction){
+    //console.log(left)
+    let x = { left: primaryValue, right: primaryValue, direction: "perpendicular"}
+    let y = { left: primaryValue, right: primaryValue, direction: "parallel" }
+    if(direction == "perpendicular"){
+      x = { left: left, right: right, direction: "perpendicular"}
+    }
+    if(direction == "parallel"){
+      y = { left: left, right: right, direction: "parallel"}
+    }
+    return [x,y]
+  }
+  Number.prototype.splits = function (a, b, c, axis) {
+    [this.left, this.right, this.direction] = arguments;
+    return this
+  }
+  Number.prototype.rearrange = function(axis,value,parentDirection){
+    let sum = Number(this.left) + Number(this.right)
+    let parent = this.valueOf()
+    let left = Math.round((parent/sum * Number(this.left)))
+    let right =  Math.round((parent/sum * Number(this.right)))
+    this.dimension = [left,right]
+
+    if(axis){
+      if(this.direction=="perpendicular"){
+        axis[0].left = left
+        axis[0].right = right
+      }
+      if(this.direction == "parallel"){
+        axis[1].left = left
+        axis[1].right = right
+      }
+      this.axis = axis     
+    }
+    else{
+      this.axis = restructure(left+right,left,right,this.direction)
+    }
+
+    let getPerpendicular = this.axis[0]
+    let getParallel = this.axis[1]
+    //console.log(left,right)
+      if(typeof this.left == 'object'){
+        let xl = getPerpendicular.left.splits((this.left.left),(this.left.right),this.left.direction)
+        let yl = getParallel.left.splits((this.left.left),(this.left.right),this.left.direction) 
+        let newAxisX = [{ left: Number(left)  , right: Number(right) , direction: "perpendicular" },this.axis[1]]
+        let newAxisY = [this.axis[0],{ left: Number(left), right: Number(right), direction: "parallel" }]
+        if(this.left.direction !== this.direction && this.left.direction == 'perpendicular'){
+          newAxisX.map(getParent =>{
+            if(getParent.direction==this.direction){
+              getParent.left = left
+              getParent.right = left
+            }
+          })
+          this.left = xl.rearrange(newAxisX,left,this.direction)
+        }
+        else if(this.left.direction !== this.direction && this.left.direction == 'parallel'){
+          newAxisY.map(getParent =>{
+            if(getParent.direction==this.direction){
+              getParent.left = left
+              getParent.right = left
+            }
+          })
+          this.left = yl.rearrange(newAxisY,left,this.direction)
+        }
+        else{
+          this.left = this.left.direction == 'perpendicular'? xl.rearrange(newAxisX,left,this.direction):yl.rearrange(newAxisY,left,this.direction)
+        }
+      }
+      else{
+        this.left = this.dimension[0]
+      }
+      if(typeof this.right == 'object'){
+        let xr = getPerpendicular.right.splits((this.right.left),(this.right.right),this.right.direction)
+        let yr = getParallel.right.splits((this.right.left),(this.right.right),this.right.direction)
+        let newAxisX = [{ left: Number(left), right: Number(right), direction: "perpendicular" },this.axis[1]]
+        let newAxisY = [this.axis[0],{ left: Number(left), right: Number(right), direction: "parallel" }]
+        if(this.right.direction !== this.direction && this.right.direction == 'perpendicular'){
+          newAxisX.map(getParent =>{
+            if(getParent.direction==this.direction){
+              getParent.left = right
+              getParent.right = right
+            }
+          })
+          this.right = xr.rearrange(newAxisX,right,this.direction)
+        }
+        else if(this.right.direction !== this.direction && this.right.direction == 'parallel'){
+          newAxisY.map(getParent =>{
+            if(getParent.direction==this.direction){
+              getParent.left = right
+              getParent.right = right
+            }
+          })
+          this.right = yr.rearrange(newAxisY,right,this.direction)
+        }
+        else{
+          this.right = this.right.direction == 'perpendicular'? xr.rearrange(newAxisX,right,this.direction):yr.rearrange(newAxisY,right,this.direction)
+        }
+        
+      }
+      else{
+        this.right = this.dimension[1]
+      }
+    return this
+  }
+  const composeObject =[]
+  const nodeList = document.querySelectorAll("div[layout]");
+  for (let i = 0; i < nodeList.length; i++) {
+      var att = nodeList[i].getAttribute("layout")
+      composeObject[i] = eval(att)
+    }
+
+    let test2 = (100).splits(lg.splits(lg.splits(lg,sm.splits(sm,lg,'perpendicular') ,'parallel'),sm ,'perpendicular'), sm.splits(sm,lg,'parallel'),'perpendicular')
+  let test1 = (100).splits(lg.splits(lg,sm ,'perpendicular'), sm.splits(lg,sm ,'parallel'),'perpendicular')
+  let test3 = (100).splits(lg.splits(lg,sm ,'parallel'), sm.splits(lg,sm ,'parallel'),'parallel')
+  console.log(test3.rearrange())
+        </script>
+    </body>
+</html>
