@@ -12,7 +12,6 @@ There is no need to install you can just copy paste to the root folder. The trad
  2. Paste all files and folder in the main folder of your HTML code.
  3. Add `<script type="module" src="rowcolumn.js"></script>` to head of your html file.
  4. Start making grid websites easily.
- 5. Always use the latest version for new feature.
 
 ### Basics to use
  1. On parent `<div>` create a `layout` attribute like this `<div layout="...">`. The row column codes will be written inside the layout attribute.
@@ -29,6 +28,9 @@ There is no need to install you can just copy paste to the root folder. The trad
  
 
 ## Notes
-**Based on Javascript ES6**
-**Demo HTML file is added in repo for the disposal**
+**-> Based on Javascript ES6**
+
+**-> Demo HTML file is added in repo for the disposal**
+
+**-> Always use the latest version for new feature.**
 
