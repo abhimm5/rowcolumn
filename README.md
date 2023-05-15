@@ -20,7 +20,7 @@ There is no need to install you can just copy paste to the root folder. The trad
  4. You can further divide the resultent div into two parts in different direction making the framework 2 dimentional example `<div layout="(100).splits(lg,sm.splits(lg,sm ,'parallel'),'perpendicular')">` here `lg` and `sm` are two primary numbers of the framework.
  5. You can also make any desired number of columns and rows. There is no restriction to make 12 columns. To make 12 columns we just have to do like `<div layout="(100).splits(3/12,9/12,'perpendicular')">` this will make columns of 12 divided into 3 and 9 parts. Just start with any natural number, only basic maths about calulation is required to make any numbers of column.
  6. You can also do further divide the columns in any direction you want, let say to divide the number rectangular display of any `div` further we do `<div layout="(100).splits(3/12,(9/12).splits(6/9,(3/9),'perpendicular'),'perpendicular')">` in same direction or in different direction as many as.
- 7. In splitting any number remember the denominator of child must be same to the numerator of the parent, this is just an expection, but to make perfect column you should follow this.
+ 7. In splitting any number remember the denominator of child must be same to the numerator of the parent, this is just an exception, but to make perfect column you should follow this.
 
 ### Responsivity
  1. Coming very soon
