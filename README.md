@@ -1,4 +1,4 @@
-# Row Column v1.0.0
+# Row Column v0.1.0
  ### Introduction
  Simple javascript framework/library to create beautiful websites effortlessly.
  This framework makes grid coding on html easy. No need of CSS file and additional width height coding in CSS, which makes code easy to read and manage also prevent from repeatition. 
