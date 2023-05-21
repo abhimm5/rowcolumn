@@ -26,7 +26,9 @@ import {
     property,
     childProperty
 } from './components/names/functions.js'
-
+import repeat from './main/repeat/repeat.js'
+import repeatCol from './main/repeat/col.js'
+import repeatRow from './main/repeat/row.js'
 
 window.addEventListener("load", () => {
     let parent = 100;
@@ -37,6 +39,8 @@ window.addEventListener("load", () => {
     addDevise()
     addExtract()
     addComponents()
+    repeatCol()
+    repeatRow()
     const nodeList = document.querySelectorAll("div[layout]")
     const composeObject = []
     let i
