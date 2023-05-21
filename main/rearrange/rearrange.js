@@ -5,9 +5,30 @@ export const addRearrange = () => {
     Number.prototype.rearrange = function(axis, point, distance,parentValue) {
         let sum = Number(this.left) + Number(this.right)
         let parent = this.valueOf()
-        let left = Math.round((parent / sum * Number(this.left)))
-        let right = Math.round((parent / sum * Number(this.right)))
-        let x, y, myPoint,parentDimention
+        let left 
+        let right 
+        let x, y, myPoint, parentDimention
+        //console.log(this)
+        if (this.presetAxis) {
+            console.log(this.presetAxis,axis)
+            if (this.direction == 'parallel') {
+                let parent = this.presetAxis[1]
+                left = Math.round((parent / sum * Number(this.left)) * 10) / 10
+                right = Math.round((parent / sum * Number(this.right)) * 10) / 10
+                this.axis = restructure(this.presetAxis[0], left, right, this.direction)
+            } else if (this.direction == 'perpendicular') {
+                let parent = this.presetAxis[0]
+                left = Math.round((parent / sum * Number(this.left)) * 10) / 10
+            right = Math.round((parent / sum * Number(this.right)) * 10) / 10
+                this.axis = restructure(this.presetAxis[1], left, right, this.direction)
+            }
+           
+            this.dimension = [left, right]
+        } else {
+            left = Math.round((parent / sum * Number(this.left)) * 10) / 10
+            right = Math.round((parent / sum * Number(this.right)) * 10) / 10
+            this.dimension = [left, right]
+        }
         if(parentValue){
             parentDimention = parentValue
         }
@@ -25,7 +46,11 @@ export const addRearrange = () => {
             }
             this.axis = axis
         } else {
-            this.axis = restructure(left + right, left, right, this.direction)
+            if (this.axis) {
+                this.axis = this.axis
+            } else {
+                this.axis = restructure(left + right, left, right, this.direction)
+            }
         }
         if (point) {
             let oldPoint = JSON.parse(JSON.stringify(point))
@@ -150,8 +175,14 @@ export const addRearrange = () => {
         } else {
             this.right = right
         }
-        x.unshift(0, parentDimention)
-        y.unshift(0, parentDimention)
+        if(this.presetAxis){
+            x.unshift(0, this.presetAxis[0])
+            y.unshift(0, this.presetAxis[1])
+        }
+        else{
+            x.unshift(0, parentDimention)
+            y.unshift(0, parentDimention)
+        }
         let xsorted = x.sort(function(a, b) {
             return a - b
         })
@@ -164,11 +195,11 @@ export const addRearrange = () => {
         this.gridTemplateRows = []
         x.map((value, index, array) => {
             let num = array[index + 1] - value;
-            this.gridTemplateColumns.push(num)
+            this.gridTemplateColumns.push(Math.round(num * 10) / 10)
         })
         y.map((value, index, array) => {
             let num = array[index + 1] - value;
-            this.gridTemplateRows.push(num)
+            this.gridTemplateRows.push(Math.round(num * 10) / 10)
         })
         const removeItems = (array, itemToRemove) => {
             return array.filter(v => {
