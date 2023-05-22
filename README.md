@@ -1,7 +1,7 @@
 # Row Column v0.1.0
  ### Introduction
  Simple javascript framework/library to create beautiful websites effortlessly.
- This framework makes grid coding on html easy. No need of CSS file and additional width height coding in CSS, which makes code easy to read and manage also prevent from repeatition. 
+ This framework makes grid coding on html easy. No need of CSS file and additional width height coding in CSS, which makes code easy to read and manage also prevents from repeatition. 
  This is framework is based on CSS Grid unlike most of frameworks depend on flex or float.
  As this framework extracted from CSS, it is 2 dimentional. One line code can give whole page a desired layout.
  This framework also starts with new way to create grid.
@@ -22,8 +22,8 @@ There is no need to install you can just copy paste to the root folder. The trad
  6. You can also do further divide the columns in any direction you want, let say to divide the number rectangular display of any `div` further we do `<div layout="(100).splits(3/12,(9/12).splits(6/9,(3/9),'perpendicular'),'perpendicular')">` in same direction or in different direction as many as.
  7. In splitting any number remember the denominator of child must be same to the numerator of the parent, this is just an exception, but to make perfect column you should follow this.
 
-### Responsivity
- 1. Coming very soon
+### Responsive
+ 1. Uses breakpoints landscape and portrait
 
 ## Creating grids simple
  This framework will let us make grid, layout, and rows and columns easy. Just controlling the layout from parent `<div>` without touching the children `<div>` It is also free to use and open source.
