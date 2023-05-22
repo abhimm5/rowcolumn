@@ -8,7 +8,6 @@ export const addRearrange = () => {
         let left 
         let right 
         let x, y, myPoint, parentDimention
-        //console.log(this)
         if (this.presetAxis) {
             console.log(this.presetAxis,axis)
             if (this.direction == 'parallel') {
