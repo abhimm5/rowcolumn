@@ -9,7 +9,6 @@ export const addRearrange = () => {
         let right 
         let x, y, myPoint, parentDimention
         if (this.presetAxis) {
-            console.log(this.presetAxis,axis)
             if (this.direction == 'parallel') {
                 let parent = this.presetAxis[1]
                 left = Math.round((parent / sum * Number(this.left)) * 10) / 10
