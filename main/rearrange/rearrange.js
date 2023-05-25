@@ -208,6 +208,11 @@ export const addRearrange = () => {
         this.y = y.filter((item, index) => y.indexOf(item) === index)
         this.gridTemplateColumns = removeItems(this.gridTemplateColumns, [0, NaN])
         this.gridTemplateRows = removeItems(this.gridTemplateRows, [0, NaN])
+      if(this.presetAxis){
+            if(this.gridTemplateRows.length>1){
+               this.gridTemplateRows.pop()
+            }
+        }
         return this
     }
 }
