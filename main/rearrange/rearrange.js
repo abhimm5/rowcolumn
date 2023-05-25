@@ -9,7 +9,6 @@ export const addRearrange = () => {
         let right 
         let x, y, myPoint, parentDimention
         if (this.presetAxis) {
-            console.log(this.presetAxis,axis)
             if (this.direction == 'parallel') {
                 let parent = this.presetAxis[1]
                 left = Math.round((parent / sum * Number(this.left)) * 10) / 10
@@ -209,6 +208,11 @@ export const addRearrange = () => {
         this.y = y.filter((item, index) => y.indexOf(item) === index)
         this.gridTemplateColumns = removeItems(this.gridTemplateColumns, [0, NaN])
         this.gridTemplateRows = removeItems(this.gridTemplateRows, [0, NaN])
+      if(this.presetAxis){
+            if(this.gridTemplateRows.length>1){
+               this.gridTemplateRows.pop()
+            }
+        }
         return this
     }
 }
