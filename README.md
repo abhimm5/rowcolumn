@@ -6,7 +6,7 @@
  As this framework extracted from CSS, it is 2 dimentional. One line code can give whole page a desired layout.
  This framework also starts with new way to create grid.
 ## Using framework
-There is no need to install you can just copy paste to the root folder. The traditional method was to use grid of 12 is obsolete. CSS grid came to solve the grid making which is being widely used. Using this framework will make new style way to create grid in unlimited number in two dimension.
+There is no need to install you can just copy paste to the root folder. The traditional method was to use grid of 12 is obsolete now. CSS grid came to solve the grid making easy which is being widely used. Using this framework will make new styled way to create grid in unlimited number in two dimension.
 ### How
  1. Download from latest release.
  2. Paste all files and folder in the main folder of your HTML code.
@@ -23,14 +23,14 @@ There is no need to install you can just copy paste to the root folder. The trad
  7. In splitting any number remember the denominator of child must be same to the numerator of the parent, this is just an exception, but to make perfect column you should follow this.
 
 ### Responsive
- 1. Uses breakpoints landscape and portrait
+ 1. Uses breakpoints landscape and portrait. Utility function is provided to make desired breakpoint.
 
 ## Creating grids simple
  This framework will let us make grid, layout, and rows and columns easy. Just controlling the layout from parent `<div>` without touching the children `<div>` It is also free to use and open source.
  
 ## Support 
  Please contribute the repository and make it grow.
- ### Working
+ 
  
 
 ## Notes
@@ -40,3 +40,4 @@ There is no need to install you can just copy paste to the root folder. The trad
 
 **-> Always use the latest version for new feature.**
 
+**-> Works in React or any major framework**
