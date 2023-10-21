@@ -1,4 +1,4 @@
-# Row Column v0.1.0 - Grid based first css two dimensional framework on line based placement.
+# Row Column v0.3 - Grid based first css two dimensional framework on line based placement.
  ### Introduction
  Simple javascript framework/library to create beautiful websites effortlessly.
  This framework makes grid coding on html easy. No need of CSS file and additional width height coding in CSS, which makes code easy to read and manage also prevents from repeatition. 
