@@ -1,0 +1,67 @@
+{
+  "name": "rowscolumns",
+  "version": "1.2.4",
+  "description": "A robust, native-syntax grid layout engine.",
+  "main": "./dist/index.js",
+  "module": "./dist/index.mjs",
+  "types": "./dist/index.d.ts",
+  
+  "keywords": [
+    "javascript",
+    "css",
+    "design",
+    "grid",
+    "framework",
+    "grid layout",
+    "css-framework",
+    "css-grid",
+    "grid-layout",
+    "golden-ratio",
+    "symmetry",
+    "js-framework",
+    "no-flexbox"
+  ],
+
+  "files": [
+    "dist",
+    "README.md",
+    "package.json"
+  ],
+
+  "exports": {
+    ".": {
+      "types": "./dist/index.d.ts",
+      "import": "./dist/index.mjs",
+      "require": "./dist/index.js"
+    },
+    "./react": {
+      "types": "./dist/react.d.ts",
+      "import": "./dist/react.mjs",
+      "require": "./dist/react.js"
+    },
+    "./vue": {
+      "types": "./dist/vue.d.ts",
+      "import": "./dist/vue.mjs",
+      "require": "./dist/vue.js"
+    }
+  },
+  "scripts": {
+    "build": "tsup",
+    "dev": "tsup --watch"
+  },
+  "peerDependencies": {
+    "react": ">=16",
+    "vue": ">=3"
+  },
+  "peerDependenciesMeta": {
+    "react": { "optional": true },
+    "vue": { "optional": true }
+  },
+  "devDependencies": {
+    "tsup": "^8.0.0",
+    "typescript": "^5.0.0",
+    "@types/react": "^18.0.0",
+    "react": "^18.0.0",
+    "vue": "^3.0.0"
+  }
+}

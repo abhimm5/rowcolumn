@@ -1,0 +1,64 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>RowsColumns Library Test</title>
+    <style>
+        /* Basic Reset */
+        * { box-sizing: border-box; margin: 0; padding: 0; }
+        body { width: 100vw; height: 100vh; overflow: hidden; font-family: sans-serif; background: #222; }
+
+        /* Ensure grid containers stretch */
+        [layout], [layout-sm], [layout-md], [layout-lg] {
+            display: grid;
+            width: 100%;
+            height: 100%;
+            align-content: start; 
+        }
+
+        /* Styling for visual feedback */
+        .box {
+            display: flex; justify-content: center; align-items: center;
+            font-size: 1.5rem; font-weight: bold; color: #333;
+            background: white; border: 1px solid #999; border-radius: 4px;
+        }
+    </style>
+</head>
+<body>
+
+    <!-- 
+       TEST CASE: 
+       Using your V8 Syntax.
+       Layout: Left Col, Right Col (split top/bottom), Bottom-Right is Offset.
+       Divs should conform to rules.
+    -->
+    <div 
+        layout="(100).col(50,50).props({gap:'10px', padding:'10px'})"
+        
+        layout-md="(100).col(lg,sm.row(lg,sm.col(lg,sm))).offset([2,4]).childProps({color:'red'},[2])"
+    >
+       
+       
+       <div class="box">2</div>
+       
+       <div class="box">4</div>
+
+       
+    </div>
+
+    <!-- IMPORT YOUR LIBRARY -->
+    <!-- type="module" is required to import .mjs files locally -->
+    <script type="module">
+        // 1. Import the Engine from your built file
+        import { Engine } from './dist/index.mjs';
+
+        // 2. Initialize the Engine
+        // (This installs the .col/.row extensions and starts the resize listener)
+        Engine.init();
+
+        console.log("RowsColumns Engine Initialized!");
+    </script>
+
+</body>
+</html>
