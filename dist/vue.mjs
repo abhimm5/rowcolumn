@@ -2,18 +2,24 @@
 import { defineComponent, h, ref, onMounted, onUpdated, onUnmounted } from "vue";
 
 // src/core.ts
-var LayoutNode = class {
+var AUTO_SIZE = 1e-6;
+var LayoutNode = class _LayoutNode {
   constructor(size, type = "leaf", children = []) {
     this.size = size;
     this.type = type;
     this.children = children;
-    // State
     this.isSkippedSelf = false;
     this.offsetIndices = [];
     this.styles = {};
     this.childPropsRules = [];
   }
-  // Chainable Methods
+  // --- NEW: Allow chaining directly on Nodes (fixes auto.col) ---
+  col(...children) {
+    return new _LayoutNode(this.size, "col", children);
+  }
+  row(...children) {
+    return new _LayoutNode(this.size, "row", children);
+  }
   offset(indices) {
     if (Array.isArray(indices)) this.offsetIndices = indices;
     else this.isSkippedSelf = true;
@@ -74,14 +80,13 @@ var Engine = {
   evalLayout(str) {
     if (!str) return void 0;
     try {
-      const func = new Function("lg", "sm", "return " + str);
-      return func(61.8, 38.2);
+      const func = new Function("lg", "sm", "Grid", "auto", "return " + str);
+      return func(61.8, 38.2, 100, new LayoutNode("auto"));
     } catch (e) {
       console.error(`Layout Error: "${str}"`, e);
       return void 0;
     }
   },
-  // --- HELPER: Is this object a Layout Node? (Duck Typing) ---
   isNode(n) {
     return n && typeof n === "object" && Array.isArray(n.children) && (n.type === "col" || n.type === "row" || n.type === "leaf");
   },
@@ -129,14 +134,18 @@ var Engine = {
       if (l.isSkipped) return;
       if (!kids[kidIdx]) return;
       const k = kids[kidIdx++];
-      k.style.gridColumn = `${this.idx(xc, l.x) + 1} / ${this.idx(xc, l.x + l.w) + 1}`;
-      k.style.gridRow = `${this.idx(yc, l.y) + 1} / ${this.idx(yc, l.y + l.h) + 1}`;
+      const cs = this.idx(xc, l.x) + 1;
+      const ce = this.idx(xc, l.x + l.w) + 1;
+      const rs = this.idx(yc, l.y) + 1;
+      const re = this.idx(yc, l.y + l.h) + 1;
+      k.style.gridColumn = `${cs} / ${ce}`;
+      k.style.gridRow = `${rs} / ${re}`;
       if (l.styles) Object.assign(k.style, l.styles);
     });
   },
   calc(n, x, y, w, h2, leaves, pSkip, offRules) {
     if (!n) return;
-    if (typeof n === "number" || n === "auto") n = new LayoutNode(n === "auto" ? 0 : n, "leaf");
+    if (typeof n === "number" || n === "auto") n = new LayoutNode(n === "auto" ? "auto" : n, "leaf");
     const isLayoutNode = this.isNode(n);
     const skip = pSkip || isLayoutNode && n.isSkippedSelf;
     const offs = [...offRules];
@@ -154,20 +163,24 @@ var Engine = {
     let tw = 0;
     n.children.forEach((c) => {
       let s = this.isNode(c) ? c.size : c;
-      if (s === "auto" || this.isNode(c) && c.size === 0) s = 1;
+      if (s === "auto") s = 0;
+      else if (this.isNode(c) && c.size === 0) s = 1;
       tw += Number(s);
     });
+    if (tw === 0) tw = 1;
     let pos = n.type === "col" ? x : y;
     n.children.forEach((c) => {
       let s = this.isNode(c) ? c.size : c;
-      if (s === "auto" || this.isNode(c) && c.size === 0) s = 1;
-      let r = Number(s) / tw;
+      const isAuto = s === "auto";
+      let numSize = isAuto ? 0 : Number(s);
+      if (this.isNode(c) && c.size === 0 && !isAuto) numSize = 1;
+      let r = numSize / tw;
       if (n.type === "col") {
-        let cw = w * r;
+        let cw = isAuto ? AUTO_SIZE : w * r;
         this.calc(c, pos, y, cw, h2, leaves, skip, offs);
         pos += cw;
       } else {
-        let ch = h2 * r;
+        let ch = isAuto ? AUTO_SIZE : h2 * r;
         this.calc(c, x, pos, w, ch, leaves, skip, offs);
         pos += ch;
       }
@@ -179,14 +192,18 @@ var Engine = {
       rx.push(r.x, r.x + r.w);
       ry.push(r.y, r.y + r.h);
     });
-    const dedup = (a) => [...new Set(a.sort((a2, b) => a2 - b))].filter((v, i, s) => i === 0 || v - s[i - 1] > 0.05);
+    const dedup = (a) => [...new Set(a.sort((a2, b) => a2 - b))].filter((v, i, s) => i === 0 || Math.abs(v - s[i - 1]) > AUTO_SIZE / 10);
     const xc = dedup(rx), yc = dedup(ry);
-    return {
-      xc,
-      yc,
-      cw: xc.slice(1).map((v, i) => v - xc[i] + "fr"),
-      rh: yc.slice(1).map((v, i) => v - yc[i] + "fr")
+    const getTracks = (cuts) => {
+      const tracks = [];
+      for (let i = 1; i < cuts.length; i++) {
+        let size = cuts[i] - cuts[i - 1];
+        if (Math.abs(size - AUTO_SIZE) < 1e-7) tracks.push("auto");
+        else tracks.push(size + "fr");
+      }
+      return tracks;
     };
+    return { xc, yc, cw: getTracks(xc), rh: getTracks(yc) };
   },
   idx(arr, val) {
     let idx = -1, min = Infinity;

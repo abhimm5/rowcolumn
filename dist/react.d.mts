@@ -1,6 +1,10 @@
 import React, { HTMLAttributes, ReactNode } from 'react';
-import { L as LayoutNode } from './core-CHl-GzSD.mjs';
+import { L as LayoutNode } from './core-BmOascL1.mjs';
 
+declare const Grid = 100;
+declare const lg = 61.8;
+declare const sm = 38.2;
+declare const auto = "auto";
 interface LayoutProps extends Omit<HTMLAttributes<HTMLDivElement>, 'color'> {
     layout: string | LayoutNode;
     'layout-sm'?: string | LayoutNode;
@@ -12,4 +16,4 @@ interface LayoutProps extends Omit<HTMLAttributes<HTMLDivElement>, 'color'> {
 }
 declare const Layout: React.FC<LayoutProps>;
 
-export { Layout };
+export { Grid, Layout, auto, lg, sm };

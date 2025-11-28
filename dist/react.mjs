@@ -2,18 +2,24 @@
 import { useRef, useEffect } from "react";
 
 // src/core.ts
-var LayoutNode = class {
+var AUTO_SIZE = 1e-6;
+var LayoutNode = class _LayoutNode {
   constructor(size, type = "leaf", children = []) {
     this.size = size;
     this.type = type;
     this.children = children;
-    // State
     this.isSkippedSelf = false;
     this.offsetIndices = [];
     this.styles = {};
     this.childPropsRules = [];
   }
-  // Chainable Methods
+  // --- NEW: Allow chaining directly on Nodes (fixes auto.col) ---
+  col(...children) {
+    return new _LayoutNode(this.size, "col", children);
+  }
+  row(...children) {
+    return new _LayoutNode(this.size, "row", children);
+  }
   offset(indices) {
     if (Array.isArray(indices)) this.offsetIndices = indices;
     else this.isSkippedSelf = true;
@@ -74,14 +80,13 @@ var Engine = {
   evalLayout(str) {
     if (!str) return void 0;
     try {
-      const func = new Function("lg", "sm", "return " + str);
-      return func(61.8, 38.2);
+      const func = new Function("lg", "sm", "Grid", "auto", "return " + str);
+      return func(61.8, 38.2, 100, new LayoutNode("auto"));
     } catch (e) {
       console.error(`Layout Error: "${str}"`, e);
       return void 0;
     }
   },
-  // --- HELPER: Is this object a Layout Node? (Duck Typing) ---
   isNode(n) {
     return n && typeof n === "object" && Array.isArray(n.children) && (n.type === "col" || n.type === "row" || n.type === "leaf");
   },
@@ -129,14 +134,18 @@ var Engine = {
       if (l.isSkipped) return;
       if (!kids[kidIdx]) return;
       const k = kids[kidIdx++];
-      k.style.gridColumn = `${this.idx(xc, l.x) + 1} / ${this.idx(xc, l.x + l.w) + 1}`;
-      k.style.gridRow = `${this.idx(yc, l.y) + 1} / ${this.idx(yc, l.y + l.h) + 1}`;
+      const cs = this.idx(xc, l.x) + 1;
+      const ce = this.idx(xc, l.x + l.w) + 1;
+      const rs = this.idx(yc, l.y) + 1;
+      const re = this.idx(yc, l.y + l.h) + 1;
+      k.style.gridColumn = `${cs} / ${ce}`;
+      k.style.gridRow = `${rs} / ${re}`;
       if (l.styles) Object.assign(k.style, l.styles);
     });
   },
   calc(n, x, y, w, h, leaves, pSkip, offRules) {
     if (!n) return;
-    if (typeof n === "number" || n === "auto") n = new LayoutNode(n === "auto" ? 0 : n, "leaf");
+    if (typeof n === "number" || n === "auto") n = new LayoutNode(n === "auto" ? "auto" : n, "leaf");
     const isLayoutNode = this.isNode(n);
     const skip = pSkip || isLayoutNode && n.isSkippedSelf;
     const offs = [...offRules];
@@ -154,20 +163,24 @@ var Engine = {
     let tw = 0;
     n.children.forEach((c) => {
       let s = this.isNode(c) ? c.size : c;
-      if (s === "auto" || this.isNode(c) && c.size === 0) s = 1;
+      if (s === "auto") s = 0;
+      else if (this.isNode(c) && c.size === 0) s = 1;
       tw += Number(s);
     });
+    if (tw === 0) tw = 1;
     let pos = n.type === "col" ? x : y;
     n.children.forEach((c) => {
       let s = this.isNode(c) ? c.size : c;
-      if (s === "auto" || this.isNode(c) && c.size === 0) s = 1;
-      let r = Number(s) / tw;
+      const isAuto = s === "auto";
+      let numSize = isAuto ? 0 : Number(s);
+      if (this.isNode(c) && c.size === 0 && !isAuto) numSize = 1;
+      let r = numSize / tw;
       if (n.type === "col") {
-        let cw = w * r;
+        let cw = isAuto ? AUTO_SIZE : w * r;
         this.calc(c, pos, y, cw, h, leaves, skip, offs);
         pos += cw;
       } else {
-        let ch = h * r;
+        let ch = isAuto ? AUTO_SIZE : h * r;
         this.calc(c, x, pos, w, ch, leaves, skip, offs);
         pos += ch;
       }
@@ -179,14 +192,18 @@ var Engine = {
       rx.push(r.x, r.x + r.w);
       ry.push(r.y, r.y + r.h);
     });
-    const dedup = (a) => [...new Set(a.sort((a2, b) => a2 - b))].filter((v, i, s) => i === 0 || v - s[i - 1] > 0.05);
+    const dedup = (a) => [...new Set(a.sort((a2, b) => a2 - b))].filter((v, i, s) => i === 0 || Math.abs(v - s[i - 1]) > AUTO_SIZE / 10);
     const xc = dedup(rx), yc = dedup(ry);
-    return {
-      xc,
-      yc,
-      cw: xc.slice(1).map((v, i) => v - xc[i] + "fr"),
-      rh: yc.slice(1).map((v, i) => v - yc[i] + "fr")
+    const getTracks = (cuts) => {
+      const tracks = [];
+      for (let i = 1; i < cuts.length; i++) {
+        let size = cuts[i] - cuts[i - 1];
+        if (Math.abs(size - AUTO_SIZE) < 1e-7) tracks.push("auto");
+        else tracks.push(size + "fr");
+      }
+      return tracks;
     };
+    return { xc, yc, cw: getTracks(xc), rh: getTracks(yc) };
   },
   idx(arr, val) {
     let idx = -1, min = Infinity;
@@ -203,58 +220,58 @@ var Engine = {
 
 // src/react.tsx
 import { jsx } from "react/jsx-runtime";
+if (typeof window !== "undefined") {
+  installExtensions();
+}
+var Grid = 100;
+var lg = 61.8;
+var sm = 38.2;
+var auto = "auto";
 var Layout = ({
   children,
-  // Destructure these so they are NOT included in 'rest'
   layout,
-  "layout-sm": layoutSm,
-  "layout-md": layoutMd,
-  "layout-lg": layoutLg,
-  "layout-xl": layoutXl,
-  "layout-xxl": layoutXxl,
+  "layout-sm": lSm,
+  "layout-md": lMd,
+  "layout-lg": lLg,
+  "layout-xl": lXl,
+  "layout-xxl": lXxl,
   ...rest
 }) => {
   const ref = useRef(null);
-  const getActiveDirectLayout = () => {
+  const getLayout = () => {
     if (typeof window === "undefined") return void 0;
     const w = window.innerWidth;
-    if (w >= 1400 && typeof layoutXxl === "object") return layoutXxl;
-    if (w >= 1200 && typeof layoutXl === "object") return layoutXl;
-    if (w >= 992 && typeof layoutLg === "object") return layoutLg;
-    if (w >= 768 && typeof layoutMd === "object") return layoutMd;
-    if (w >= 576 && typeof layoutSm === "object") return layoutSm;
+    if (w >= 1400 && typeof lXxl === "object") return lXxl;
+    if (w >= 1200 && typeof lXl === "object") return lXl;
+    if (w >= 992 && typeof lLg === "object") return lLg;
+    if (w >= 768 && typeof lMd === "object") return lMd;
+    if (w >= 576 && typeof lSm === "object") return lSm;
     if (typeof layout === "object") return layout;
     return void 0;
   };
-  const renderLayout = () => {
-    if (ref.current) {
-      Engine.render(ref.current, getActiveDirectLayout());
-    }
+  const render = () => {
+    if (ref.current) Engine.render(ref.current, getLayout());
   };
   useEffect(() => {
-    renderLayout();
+    render();
   });
   useEffect(() => {
-    window.addEventListener("resize", renderLayout);
-    return () => window.removeEventListener("resize", renderLayout);
-  }, [layout, layoutSm, layoutMd, layoutLg, layoutXl, layoutXxl]);
+    window.addEventListener("resize", render);
+    return () => window.removeEventListener("resize", render);
+  }, [layout, lSm, lMd, lLg, lXl, lXxl]);
   const domProps = { ...rest };
   if (typeof layout === "string") domProps.layout = layout;
-  if (typeof layoutSm === "string") domProps["layout-sm"] = layoutSm;
-  if (typeof layoutMd === "string") domProps["layout-md"] = layoutMd;
-  if (typeof layoutLg === "string") domProps["layout-lg"] = layoutLg;
-  if (typeof layoutXl === "string") domProps["layout-xl"] = layoutXl;
-  return /* @__PURE__ */ jsx(
-    "div",
-    {
-      ref,
-      ...domProps,
-      style: { display: "grid", width: "100%", height: "100%", ...rest.style },
-      children
-    }
-  );
+  if (typeof lSm === "string") domProps["layout-sm"] = lSm;
+  if (typeof lMd === "string") domProps["layout-md"] = lMd;
+  if (typeof lLg === "string") domProps["layout-lg"] = lLg;
+  if (typeof lXl === "string") domProps["layout-xl"] = lXl;
+  return /* @__PURE__ */ jsx("div", { ref, ...domProps, style: { display: "grid", width: "100%", height: "100%", ...rest.style }, children });
 };
 export {
-  Layout
+  Grid,
+  Layout,
+  auto,
+  lg,
+  sm
 };
 //# sourceMappingURL=react.mjs.map

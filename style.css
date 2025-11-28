@@ -1,0 +1,140 @@
+/* Reset some default browser styles */
+
+html {
+    scroll-behavior: smooth;
+}
+body, h1, h2, p, ul, li {
+    margin: 0;
+    padding: 0;
+}
+@font-face {
+    font-family: outfit;
+    src: url('fonts/Outfit-Regular.ttf');
+}
+body {
+    font-family: outfit;
+    line-height: 1.6;
+    overflow-x: hidden;
+}
+.header {
+    font-size: 3rem;
+    display: flex;
+    align-items: flex-end;
+    justify-content: right;
+}
+#title6 {
+    color: #f1f1f1;
+    font-size: 2rem;
+    background-color: #333;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    text-align: center;
+}
+.subhead {
+    color: Green;
+}
+#love {
+    color: red;
+    font-size: 2rem;
+    text-align: right;
+}
+#doc {
+    font-style: italic;
+    color: #bbb;
+}
+#focus {
+    color: #333;
+    font-size: 5rem;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+}
+#title5 {
+    color: #333;
+    font-size: 2rem;
+    background-color: #f9f9f9;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    max-height: 48vh;
+}
+#title4, #title1, #title2, #title3 {
+    background: rgba(255, 255, 255, 0.09);
+    box-shadow: 0 4px 30px rbga(0, 0, 0, 0.1);
+    backdrop-filter: blur(2.3px);
+    webkit-backdrop-filter: blur(2.3px);
+}
+.subhead1 {
+    color: #d565af;
+    font-size: 2rem;
+    display: flex;
+    align-items: center;
+    justify-content: right;
+    text-align: right;
+}
+.subhead2 {
+    color: #d6656b;
+    font-size: 2rem;
+    display: flex;
+    align-items: center;
+    justify-content: left;
+    text-align: left;
+}
+.subhead3 {
+    color: #6597d4;
+    font-size: 2rem;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    text-align: right;
+    border: none !important;
+    rotate: -5deg;
+}
+.subhead4 {
+    color: #7665d5;
+    font-size: 2rem;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    text-align: left;
+    border: none !important;
+    rotate: -5deg;
+}
+code {
+    background-color: rgba(240, 81, 62, 0.3);
+    font-weight: bold;
+}
+.h {
+    font-size: 3rem;
+    display: flex;
+    align-items: flex-end;
+    justify-content: center;
+}
+#s {
+    font-size: 2rem;
+    display: flex;
+    align-items: flex-start;
+    justify-content: center;
+}
+p {
+    text-align: justify;
+    text-justify: inter-word;
+}
+.clean {
+    background-color: none;
+    overflow-x: scroll;
+}
+pre {
+    background-color: rgba(240, 81, 62, 0.1);
+}
+.note {
+    font-style: italic;
+}
+ul{
+    list-style-type: none;
+}
+li{
+    display: inline;
+    margin:0px 20px ;
+}

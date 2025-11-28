@@ -1,7 +1,17 @@
 import React, { useRef, useEffect, ReactNode, HTMLAttributes } from 'react';
-import { Engine, LayoutNode } from './core';
+import { Engine, LayoutNode, installExtensions } from './core';
 
-// Define props, allowing both Strings (Vanilla style) and Objects (Native style)
+// AUTO-INSTALL EXTENSIONS
+if (typeof window !== 'undefined') {
+  installExtensions();
+}
+
+// RE-EXPORT CONSTANTS
+export const Grid = 100;
+export const lg = 61.8;
+export const sm = 38.2;
+export const auto = 'auto';
+
 interface LayoutProps extends Omit<HTMLAttributes<HTMLDivElement>, 'color'> {
   layout: string | LayoutNode;
   'layout-sm'?: string | LayoutNode;
@@ -13,65 +23,39 @@ interface LayoutProps extends Omit<HTMLAttributes<HTMLDivElement>, 'color'> {
 }
 
 export const Layout: React.FC<LayoutProps> = ({ 
-  children, 
-  // Destructure these so they are NOT included in 'rest'
-  layout, 
-  'layout-sm': layoutSm,
-  'layout-md': layoutMd,
-  'layout-lg': layoutLg,
-  'layout-xl': layoutXl,
-  'layout-xxl': layoutXxl,
-  ...rest 
+  children, layout, 'layout-sm': lSm, 'layout-md': lMd, 'layout-lg': lLg, 'layout-xl': lXl, 'layout-xxl': lXxl, ...rest 
 }) => {
   const ref = useRef<HTMLDivElement>(null);
 
-  const getActiveDirectLayout = () => {
+  const getLayout = () => {
     if (typeof window === 'undefined') return undefined;
     const w = window.innerWidth;
-    
-    // Check breakpoints (Largest to Smallest)
-    if (w >= 1400 && typeof layoutXxl === 'object') return layoutXxl;
-    if (w >= 1200 && typeof layoutXl === 'object') return layoutXl;
-    if (w >= 992 && typeof layoutLg === 'object') return layoutLg;
-    if (w >= 768 && typeof layoutMd === 'object') return layoutMd;
-    if (w >= 576 && typeof layoutSm === 'object') return layoutSm;
-    
-    // Default
-    if (typeof layout === 'object') return layout;
-    
+    if (w >= 1400 && typeof lXxl === 'object') return lXxl as LayoutNode;
+    if (w >= 1200 && typeof lXl === 'object') return lXl as LayoutNode;
+    if (w >= 992 && typeof lLg === 'object') return lLg as LayoutNode;
+    if (w >= 768 && typeof lMd === 'object') return lMd as LayoutNode;
+    if (w >= 576 && typeof lSm === 'object') return lSm as LayoutNode;
+    if (typeof layout === 'object') return layout as LayoutNode;
     return undefined; 
   };
 
-  const renderLayout = () => {
-    if (ref.current) {
-      Engine.render(ref.current, getActiveDirectLayout() as LayoutNode | undefined);
-    }
-  };
+  const render = () => { if (ref.current) Engine.render(ref.current, getLayout()); };
 
+  useEffect(() => { render(); });
   useEffect(() => {
-    renderLayout();
-  });
+    window.addEventListener('resize', render);
+    return () => window.removeEventListener('resize', render);
+  }, [layout, lSm, lMd, lLg, lXl, lXxl]);
 
-  useEffect(() => {
-    window.addEventListener('resize', renderLayout);
-    return () => window.removeEventListener('resize', renderLayout);
-  }, [layout, layoutSm, layoutMd, layoutLg, layoutXl, layoutXxl]);
-
-  // Prepare DOM Props (Only pass strings to DOM for debugging/SSR)
   const domProps: any = { ...rest };
-  
   if (typeof layout === 'string') domProps.layout = layout;
-  if (typeof layoutSm === 'string') domProps['layout-sm'] = layoutSm;
-  if (typeof layoutMd === 'string') domProps['layout-md'] = layoutMd;
-  if (typeof layoutLg === 'string') domProps['layout-lg'] = layoutLg;
-  if (typeof layoutXl === 'string') domProps['layout-xl'] = layoutXl;
+  if (typeof lSm === 'string') domProps['layout-sm'] = lSm;
+  if (typeof lMd === 'string') domProps['layout-md'] = lMd;
+  if (typeof lLg === 'string') domProps['layout-lg'] = lLg;
+  if (typeof lXl === 'string') domProps['layout-xl'] = lXl;
 
   return (
-    <div 
-      ref={ref} 
-      {...domProps} 
-      style={{ display: 'grid', width: '100%', height: '100%', ...rest.style }}
-    >
+    <div ref={ref} {...domProps} style={{ display: 'grid', width: '100%', height: '100%', ...rest.style }}>
       {children}
     </div>
   );

@@ -6,21 +6,26 @@
 export interface StyleMap { [key: string]: string | number; }
 export interface ChildPropRule { style: StyleMap; indices: number[] | null; }
 
+// CONSTANTS
+const AUTO_SIZE = 0.000001; // Internal placeholder for 'auto' tracks
+
 // --- 1. CORE CLASSES ---
 export class LayoutNode {
   constructor(
-    public size: number,
+    public size: number | string,
     public type: 'leaf' | 'col' | 'row' = 'leaf',
     public children: any[] = []
   ) {}
 
-  // State
   isSkippedSelf = false;
   offsetIndices: number[] = [];
   styles: StyleMap = {};
   childPropsRules: ChildPropRule[] = [];
 
-  // Chainable Methods
+  // --- NEW: Allow chaining directly on Nodes (fixes auto.col) ---
+  col(...children: any[]) { return new LayoutNode(this.size, 'col', children); }
+  row(...children: any[]) { return new LayoutNode(this.size, 'row', children); }
+
   offset(indices?: number[]) {
     if (Array.isArray(indices)) this.offsetIndices = indices;
     else this.isSkippedSelf = true;
@@ -34,7 +39,14 @@ export class LayoutNode {
 }
 
 export class Rect {
-  constructor(public x: number, public y: number, public w: number, public h: number, public styles: any, public isSkipped: boolean) {}
+  constructor(
+    public x: number, 
+    public y: number, 
+    public w: number, 
+    public h: number, 
+    public styles: any, 
+    public isSkipped: boolean
+  ) {}
 }
 
 // --- 2. PROTOTYPE EXTENSIONS ---
@@ -73,17 +85,16 @@ export const Engine = {
   evalLayout(str: string): LayoutNode | undefined {
     if (!str) return undefined;
     try {
-      const func = new Function('lg', 'sm', 'return ' + str);
-      return func(61.8, 38.2);
+      // FIX: Pass 'auto' as a LayoutNode, not a string
+      const func = new Function('lg', 'sm', 'Grid', 'auto', 'return ' + str);
+      return func(61.8, 38.2, 100, new LayoutNode('auto')); 
     } catch (e) {
       console.error(`Layout Error: "${str}"`, e);
       return undefined;
     }
   },
 
-  // --- HELPER: Is this object a Layout Node? (Duck Typing) ---
   isNode(n: any): boolean {
-    // We verify it has 'children' array and a valid 'type'
     return n && typeof n === 'object' && Array.isArray(n.children) && (n.type === 'col' || n.type === 'row' || n.type === 'leaf');
   },
 
@@ -106,7 +117,6 @@ export const Engine = {
 
     const domStyles: ChildPropRule[] = [];
     const scan = (n: any) => {
-       // CHANGED: Use helper instead of instanceof
        if(this.isNode(n)) {
          if(n.childPropsRules) domStyles.push(...n.childPropsRules);
          n.children.forEach(scan);
@@ -135,28 +145,31 @@ export const Engine = {
        if (l.isSkipped) return;
        if (!kids[kidIdx]) return;
        const k = kids[kidIdx++];
-       k.style.gridColumn = `${this.idx(xc, l.x) + 1} / ${this.idx(xc, l.x + l.w) + 1}`;
-       k.style.gridRow = `${this.idx(yc, l.y) + 1} / ${this.idx(yc, l.y + l.h) + 1}`;
+       
+       const cs = this.idx(xc, l.x) + 1;
+       const ce = this.idx(xc, l.x + l.w) + 1;
+       const rs = this.idx(yc, l.y) + 1;
+       const re = this.idx(yc, l.y + l.h) + 1;
+
+       k.style.gridColumn = `${cs} / ${ce}`;
+       k.style.gridRow = `${rs} / ${re}`;
+       
        if (l.styles) Object.assign(k.style, l.styles);
     });
   },
 
   calc(n: any, x: number, y: number, w: number, h: number, leaves: Rect[], pSkip: boolean, offRules: any[]) {
     if (!n) return;
-    if (typeof n === 'number' || n === 'auto') n = new LayoutNode(n === 'auto' ? 0 : n, 'leaf');
+    if (typeof n === 'number' || n === 'auto') n = new LayoutNode(n === 'auto' ? 'auto' : n, 'leaf');
 
-    // CHANGED: Use helper instead of instanceof
     const isLayoutNode = this.isNode(n);
-
     const skip = pSkip || (isLayoutNode && n.isSkippedSelf);
     const offs = [...offRules];
     if (isLayoutNode && n.offsetIndices?.length) offs.push({ idx: n.offsetIndices, c: 0 });
 
-    // CHECK: If NOT a node, OR if it is a node but has no children -> It is a LEAF
     if (!isLayoutNode || !n.children.length) {
        let finalSkip = skip;
        offs.forEach(r => { r.c++; if (r.idx.includes(r.c)) finalSkip = true; });
-       // Only access n.styles if it's actually a node, otherwise empty
        const s = isLayoutNode ? n.styles : {}; 
        leaves.push(new Rect(x, y, w, h, s, finalSkip));
        return;
@@ -164,21 +177,31 @@ export const Engine = {
 
     let tw = 0;
     n.children.forEach((c: any) => {
-       // CHANGED: Use helper
        let s = this.isNode(c) ? c.size : c;
-       if (s === 'auto' || (this.isNode(c) && c.size===0)) s = 1;
+       if (s === 'auto') s = 0; 
+       else if (this.isNode(c) && c.size === 0) s = 1; 
        tw += Number(s);
     });
+    if(tw === 0) tw = 1;
 
     let pos = (n.type === 'col') ? x : y;
+    
     n.children.forEach((c: any) => {
        let s = this.isNode(c) ? c.size : c;
-       if (s === 'auto' || (this.isNode(c) && c.size===0)) s = 1;
-       let r = Number(s) / tw;
+       const isAuto = (s === 'auto');
+       let numSize = isAuto ? 0 : Number(s);
+       if (this.isNode(c) && c.size === 0 && !isAuto) numSize = 1;
+
+       let r = numSize / tw; 
+
        if (n.type === 'col') {
-          let cw = w * r; this.calc(c, pos, y, cw, h, leaves, skip, offs); pos += cw;
+          let cw = isAuto ? AUTO_SIZE : (w * r);
+          this.calc(c, pos, y, cw, h, leaves, skip, offs); 
+          pos += cw;
        } else {
-          let ch = h * r; this.calc(c, x, pos, w, ch, leaves, skip, offs); pos += ch;
+          let ch = isAuto ? AUTO_SIZE : (h * r);
+          this.calc(c, x, pos, w, ch, leaves, skip, offs); 
+          pos += ch;
        }
     });
   },
@@ -186,13 +209,21 @@ export const Engine = {
   mesh(leaves: Rect[]) {
     let rx = [0, 100], ry = [0, 100];
     leaves.forEach(r => { rx.push(r.x, r.x + r.w); ry.push(r.y, r.y + r.h); });
-    const dedup = (a: number[]) => [...new Set(a.sort((a,b)=>a-b))].filter((v,i,s)=>i===0||v-s[i-1]>0.05);
+    
+    const dedup = (a: number[]) => [...new Set(a.sort((a,b)=>a-b))].filter((v,i,s)=>i===0|| Math.abs(v-s[i-1]) > (AUTO_SIZE/10));
     const xc = dedup(rx), yc = dedup(ry);
-    return { 
-      xc, yc, 
-      cw: xc.slice(1).map((v,i) => (v - xc[i]) + 'fr'), 
-      rh: yc.slice(1).map((v,i) => (v - yc[i]) + 'fr') 
+
+    const getTracks = (cuts: number[]) => {
+        const tracks = [];
+        for(let i=1; i<cuts.length; i++) {
+            let size = cuts[i] - cuts[i-1];
+            if (Math.abs(size - AUTO_SIZE) < 0.0000001) tracks.push('auto');
+            else tracks.push(size + 'fr');
+        }
+        return tracks;
     };
+
+    return { xc, yc, cw: getTracks(xc), rh: getTracks(yc) };
   },
 
   idx(arr: number[], val: number) {

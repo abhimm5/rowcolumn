@@ -25,7 +25,28 @@ Instead of writing endless HTML:
 You describe the geometry directly:
 ```html
 <!-- The Rowscolumns Way -->
-<div layout="(100).col(50, 50)">
+<div layout="Grid.col(50, 50)">
+  <div>...</div>
+  <div>...</div>
+</div>
+```
+
+Fractional way
+```html
+<!-- The Rowscolumns Way -->
+<div layout="Grid.col(6/12, 6/12)">
+  <div>...</div>
+  <div>...</div>
+</div>
+```
+
+Decimal way (Remember the parameters of `col()`)
+```html
+<!-- The Rowscolumns Way -->
+<div layout="Grid.col(0.1, 0.2, 0.4, 0.1, 0.3)">
+  <div>...</div>
+  <div>...</div>
+  <div>...</div>
   <div>...</div>
   <div>...</div>
 </div>
@@ -55,20 +76,20 @@ It supports **React**, **Vue**, **TypeScript**, and **Vanilla JS** out of the bo
 ## ⚡ Getting Started
 
 ### React
-Pass layout objects directly using native JavaScript syntax.
+Pass layout objects directly using native JavaScript syntax in `Layout` component.
 
 ```tsx
-import { Layout } from 'rowscolumns/react';
+import { Layout, Grid, lg, sm, auto } from 'rowscolumns/react';
 import 'rowscolumns'; // Activates the syntax extensions
 
 export default function App() {
   return (
     <Layout 
       // 1. Split into 3 equal parts using native math
-      layout={(100).col(100/3, 100/3, 100/3)}
+      layout={Grid.col(1/3, 1/3, 1/3)}
       
       // 2. Responsive (Mobile): Stack vertical
-      layout-sm={(100).col(100)}
+      layout-sm={Grid.col(100)}
     >
       <div className="box">1</div>
       <div className="box">2</div>
@@ -88,7 +109,7 @@ import 'rowscolumns';
 </script>
 
 <template>
-  <Layout :layout="(100).col(lg, sm)">
+  <Layout :layout="Grid.col(lg, sm)">
     <div class="box">Left</div>
     <div class="box">Right</div>
   </Layout>
@@ -104,7 +125,7 @@ Use string attributes (works exactly like `onclick`).
   Engine.init();
 </script>
 
-<div layout="(100).col(50, 50)">
+<div layout="Grid.col(50, 50)">
   <div>Left</div>
   <div>Right</div>
 </div>
@@ -119,16 +140,16 @@ The library extends `Number.prototype`. You start with a number (usually `100` r
 ### 1. Columns & Rows
 Divide space horizontally (`.col`) or vertically (`.row`).
 
-*   **Split into two:** `(100).col(50, 50)`
-*   **Golden Ratio:** `(100).col(lg, sm)` (Variables `lg`=61.8, `sm`=38.2 are built-in).
-*   **Math:** `(100).col(100/3, 100/3, 100/3)`
+*   **Split into two:** `Grid.col(50, 50)`
+*   **Golden Ratio:** `Grid.col(lg, sm)` (Variables `lg`=61.8, `sm`=38.2 are built-in).
+*   **Math:** `Grid.col(1/3, 1/3, 1/3)`
 
 ### 2. Recursion (Nesting)
 You can nest splits infinitely.
 
 ```js
 // A 50/50 split, where the right side is further split into rows
-(100).col(50, 50.row(50, 50))
+Grid.col(50, (50).row(50, 50))
 ```
 
 ---
@@ -143,14 +164,14 @@ Creates "Ghost" slots. Useful for spacing or creating complex layouts where a DO
 ```js
 // Creates 2 columns, but skips the 1st slot. 
 // The first HTML div will land in the 2nd slot.
-(100).col(50, 50).offset([1]) 
+Grid.col(50, 50).offset([1]) 
 ```
 
 ### `.props({ styles })`
 Applies CSS to the **Grid Container** (Gap, Padding, etc).
 
 ```js
-(100).col(50, 50).props({ gap: '20px', padding: '1rem' })
+Grid.col(50, 50).props({ gap: '20px', padding: '1rem' })
 ```
 
 ### `.childProps({ styles }, [indices])`
@@ -159,7 +180,7 @@ Applies CSS directly to specific **DOM Children**.
 
 ```js
 // Makes the 2nd child red, regardless of where it sits in the grid
-(100).col(50, 50).childProps({ background: 'red' }, [2])
+Grid.col(50, 50).childProps({ background: 'red' }, [2])
 ```
 
 ---
@@ -179,8 +200,9 @@ No need for complex media queries. Just use the responsive attributes. The engin
 **Example:**
 ```html
 <div 
-    layout="(100).col(100)"           <!-- Mobile: Vertical Stack -->
-    layout-md="(100).col(50, 50)"     <!-- Tablet: Split -->
+    layout="Grid.col(100)"          
+    layout-md="Grid.col(50, 50)"
+    layout-lg="Grid.col(lg, sm.row(lg,sm))"     
 >
 ```
 
@@ -193,7 +215,7 @@ Because the engine uses native execution, you can define layouts in JavaScript a
 ```html
 <script>
   // Define a reusable layout function
-  window.myLayout = (gap) => (100).col(lg, sm).props({ gap });
+  window.myLayout = (gap) => Grid.col(lg, sm).props({ gap:'10px' });
 </script>
 
 <!-- Call it like a function -->
