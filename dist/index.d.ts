@@ -1,4 +1,4 @@
-export { C as ChildPropRule, E as Engine, L as LayoutNode, R as Rect, S as StyleMap, i as installExtensions } from './core-BmOascL1.js';
+export { C as ChildPropRule, E as Engine, L as LayoutNode, R as Rect, S as StyleMap, i as installExtensions } from './core-XdQQ2SP1.js';
 
 declare const Grid = 100;
 declare const lg = 61.8;

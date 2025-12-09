@@ -13,7 +13,6 @@ var LayoutNode = class _LayoutNode {
     this.styles = {};
     this.childPropsRules = [];
   }
-  // --- NEW: Allow chaining directly on Nodes (fixes auto.col) ---
   col(...children) {
     return new _LayoutNode(this.size, "col", children);
   }
@@ -35,40 +34,62 @@ var LayoutNode = class _LayoutNode {
   }
 };
 var Rect = class {
-  constructor(x, y, w, h2, styles, isSkipped) {
+  constructor(x, y, w, h2, styles, isSkipped, customSize) {
     this.x = x;
     this.y = y;
     this.w = w;
     this.h = h2;
     this.styles = styles;
     this.isSkipped = isSkipped;
+    this.customSize = customSize;
   }
 };
 var installed = false;
 function installExtensions() {
   if (installed) return;
   installed = true;
-  if (Number.prototype.col) return;
   const n = (v) => new LayoutNode(v);
-  const P = Number.prototype;
-  P.col = function(...a) {
-    return new LayoutNode(this, "col", a);
-  };
-  P.row = function(...a) {
-    return new LayoutNode(this, "row", a);
-  };
-  P.offset = function(a) {
-    return n(this).offset(a);
-  };
-  P.props = function(s) {
-    return n(this).props(s);
-  };
-  P.childProps = function(s, a) {
-    return n(this).childProps(s, a);
-  };
+  if (!Number.prototype.col) {
+    const P = Number.prototype;
+    P.col = function(...a) {
+      return new LayoutNode(this, "col", a);
+    };
+    P.row = function(...a) {
+      return new LayoutNode(this, "row", a);
+    };
+    P.offset = function(a) {
+      return n(this).offset(a);
+    };
+    P.props = function(s) {
+      return n(this).props(s);
+    };
+    P.childProps = function(s, a) {
+      return n(this).childProps(s, a);
+    };
+  }
+  if (!String.prototype.col) {
+    const S = String.prototype;
+    S.col = function(...a) {
+      return new LayoutNode(String(this), "col", a);
+    };
+    S.row = function(...a) {
+      return new LayoutNode(String(this), "row", a);
+    };
+    S.offset = function(a) {
+      return n(String(this)).offset(a);
+    };
+    S.props = function(s) {
+      return n(String(this)).props(s);
+    };
+    S.childProps = function(s, a) {
+      return n(String(this)).childProps(s, a);
+    };
+  }
 }
 var Engine = {
   bps: { sm: 576, md: 768, lg: 992, xl: 1200, xxl: 1400 },
+  _strMap: /* @__PURE__ */ new Map(),
+  _strCounter: 0,
   init() {
     installExtensions();
     this.upd();
@@ -81,7 +102,7 @@ var Engine = {
     if (!str) return void 0;
     try {
       const func = new Function("lg", "sm", "Grid", "auto", "return " + str);
-      return func(61.8, 38.2, 100, new LayoutNode("auto"));
+      return func(61.8, 38.2, 100, "auto");
     } catch (e) {
       console.error(`Layout Error: "${str}"`, e);
       return void 0;
@@ -150,6 +171,8 @@ var Engine = {
     const skip = pSkip || isLayoutNode && n.isSkippedSelf;
     const offs = [...offRules];
     if (isLayoutNode && n.offsetIndices?.length) offs.push({ idx: n.offsetIndices, c: 0 });
+    let customSize = void 0;
+    if (isLayoutNode && typeof n.size === "string") customSize = n.size;
     if (!isLayoutNode || !n.children.length) {
       let finalSkip = skip;
       offs.forEach((r) => {
@@ -157,13 +180,13 @@ var Engine = {
         if (r.idx.includes(r.c)) finalSkip = true;
       });
       const s = isLayoutNode ? n.styles : {};
-      leaves.push(new Rect(x, y, w, h2, s, finalSkip));
+      leaves.push(new Rect(x, y, w, h2, s, finalSkip, customSize));
       return;
     }
     let tw = 0;
     n.children.forEach((c) => {
       let s = this.isNode(c) ? c.size : c;
-      if (s === "auto") s = 0;
+      if (typeof s === "string") s = 0;
       else if (this.isNode(c) && c.size === 0) s = 1;
       tw += Number(s);
     });
@@ -171,34 +194,54 @@ var Engine = {
     let pos = n.type === "col" ? x : y;
     n.children.forEach((c) => {
       let s = this.isNode(c) ? c.size : c;
-      const isAuto = s === "auto";
-      let numSize = isAuto ? 0 : Number(s);
-      if (this.isNode(c) && c.size === 0 && !isAuto) numSize = 1;
+      let isString = typeof s === "string";
+      let numSize = isString ? 0 : Number(s);
+      if (this.isNode(c) && c.size === 0 && !isString) numSize = 1;
       let r = numSize / tw;
+      let stringWidth = 0;
+      if (isString) {
+        this._strCounter++;
+        stringWidth = AUTO_SIZE + this._strCounter * 1e-7;
+        this._strMap.set(stringWidth, s);
+      }
       if (n.type === "col") {
-        let cw = isAuto ? AUTO_SIZE : w * r;
+        let cw = isString ? stringWidth : w * r;
         this.calc(c, pos, y, cw, h2, leaves, skip, offs);
         pos += cw;
       } else {
-        let ch = isAuto ? AUTO_SIZE : h2 * r;
+        let ch = isString ? stringWidth : h2 * r;
         this.calc(c, x, pos, w, ch, leaves, skip, offs);
         pos += ch;
       }
     });
   },
   mesh(leaves) {
-    let rx = [0, 100], ry = [0, 100];
+    this._strCounter = 0;
+    let rx = [0], ry = [0];
+    let maxX = 0, maxY = 0;
     leaves.forEach((r) => {
       rx.push(r.x, r.x + r.w);
       ry.push(r.y, r.y + r.h);
+      if (r.x + r.w > maxX) maxX = r.x + r.w;
+      if (r.y + r.h > maxY) maxY = r.y + r.h;
     });
-    const dedup = (a) => [...new Set(a.sort((a2, b) => a2 - b))].filter((v, i, s) => i === 0 || Math.abs(v - s[i - 1]) > AUTO_SIZE / 10);
-    const xc = dedup(rx), yc = dedup(ry);
+    if (maxX > 1) rx.push(100);
+    if (maxY > 1) ry.push(100);
+    const dedup = (arr) => [...new Set(arr.sort((a, b) => a - b))].filter((v, i, s) => i === 0 || Math.abs(v - s[i - 1]) > 1e-8);
+    const xc = dedup(rx);
+    const yc = dedup(ry);
     const getTracks = (cuts) => {
       const tracks = [];
       for (let i = 1; i < cuts.length; i++) {
         let size = cuts[i] - cuts[i - 1];
-        if (Math.abs(size - AUTO_SIZE) < 1e-7) tracks.push("auto");
+        let foundString = null;
+        for (let [k, v] of this._strMap) {
+          if (Math.abs(size - k) < 1e-8) {
+            foundString = v;
+            break;
+          }
+        }
+        if (foundString) tracks.push(foundString);
         else tracks.push(size + "fr");
       }
       return tracks;

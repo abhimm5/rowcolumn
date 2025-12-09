@@ -22,7 +22,6 @@ export class LayoutNode {
   styles: StyleMap = {};
   childPropsRules: ChildPropRule[] = [];
 
-  // --- NEW: Allow chaining directly on Nodes (fixes auto.col) ---
   col(...children: any[]) { return new LayoutNode(this.size, 'col', children); }
   row(...children: any[]) { return new LayoutNode(this.size, 'row', children); }
 
@@ -45,32 +44,48 @@ export class Rect {
     public w: number, 
     public h: number, 
     public styles: any, 
-    public isSkipped: boolean
+    public isSkipped: boolean,
+    public customSize?: string 
   ) {}
 }
 
 // --- 2. PROTOTYPE EXTENSIONS ---
 declare global {
   interface Number { col(...a:any):LayoutNode; row(...a:any):LayoutNode; offset(a?:any):LayoutNode; props(s:any):LayoutNode; childProps(s:any,a?:any):LayoutNode; }
+  interface String { col(...a:any):LayoutNode; row(...a:any):LayoutNode; offset(a?:any):LayoutNode; props(s:any):LayoutNode; childProps(s:any,a?:any):LayoutNode; }
   interface Window { [key:string]: any }
 }
 
 let installed = false;
 export function installExtensions() {
   if (installed) return; installed = true;
-  if ((Number.prototype as any).col) return;
-  const n = (v: number) => new LayoutNode(v);
-  const P = Number.prototype as any;
-  P.col = function(...a:any[]) { return new LayoutNode(this, 'col', a); };
-  P.row = function(...a:any[]) { return new LayoutNode(this, 'row', a); };
-  P.offset = function(a?:any) { return n(this).offset(a); };
-  P.props = function(s:any) { return n(this).props(s); };
-  P.childProps = function(s:any, a?:any) { return n(this).childProps(s, a); };
+  
+  const n = (v: number | string) => new LayoutNode(v);
+
+  if (!(Number.prototype as any).col) {
+    const P = Number.prototype as any;
+    P.col = function(...a:any[]) { return new LayoutNode(this, 'col', a); };
+    P.row = function(...a:any[]) { return new LayoutNode(this, 'row', a); };
+    P.offset = function(a?:any) { return n(this).offset(a); };
+    P.props = function(s:any) { return n(this).props(s); };
+    P.childProps = function(s:any, a?:any) { return n(this).childProps(s, a); };
+  }
+
+  if (!(String.prototype as any).col) {
+    const S = String.prototype as any;
+    S.col = function(...a:any[]) { return new LayoutNode(String(this), 'col', a); };
+    S.row = function(...a:any[]) { return new LayoutNode(String(this), 'row', a); };
+    S.offset = function(a?:any) { return n(String(this)).offset(a); };
+    S.props = function(s:any) { return n(String(this)).props(s); };
+    S.childProps = function(s:any, a?:any) { return n(String(this)).childProps(s, a); };
+  }
 }
 
 // --- 3. THE ENGINE ---
 export const Engine = {
   bps: { sm: 576, md: 768, lg: 992, xl: 1200, xxl: 1400 } as any,
+  _strMap: new Map<number, string>(),
+  _strCounter: 0,
 
   init() {
     installExtensions();
@@ -85,9 +100,8 @@ export const Engine = {
   evalLayout(str: string): LayoutNode | undefined {
     if (!str) return undefined;
     try {
-      // FIX: Pass 'auto' as a LayoutNode, not a string
       const func = new Function('lg', 'sm', 'Grid', 'auto', 'return ' + str);
-      return func(61.8, 38.2, 100, new LayoutNode('auto')); 
+      return func(61.8, 38.2, 100, 'auto');
     } catch (e) {
       console.error(`Layout Error: "${str}"`, e);
       return undefined;
@@ -167,39 +181,50 @@ export const Engine = {
     const offs = [...offRules];
     if (isLayoutNode && n.offsetIndices?.length) offs.push({ idx: n.offsetIndices, c: 0 });
 
+    let customSize = undefined;
+    if (isLayoutNode && typeof n.size === 'string') customSize = n.size;
+
     if (!isLayoutNode || !n.children.length) {
        let finalSkip = skip;
        offs.forEach(r => { r.c++; if (r.idx.includes(r.c)) finalSkip = true; });
        const s = isLayoutNode ? n.styles : {}; 
-       leaves.push(new Rect(x, y, w, h, s, finalSkip));
+       leaves.push(new Rect(x, y, w, h, s, finalSkip, customSize));
        return;
     }
 
     let tw = 0;
     n.children.forEach((c: any) => {
        let s = this.isNode(c) ? c.size : c;
-       if (s === 'auto') s = 0; 
+       if (typeof s === 'string') s = 0;
        else if (this.isNode(c) && c.size === 0) s = 1; 
        tw += Number(s);
     });
-    if(tw === 0) tw = 1;
+    if(tw === 0) tw = 1; 
 
     let pos = (n.type === 'col') ? x : y;
     
     n.children.forEach((c: any) => {
        let s = this.isNode(c) ? c.size : c;
-       const isAuto = (s === 'auto');
-       let numSize = isAuto ? 0 : Number(s);
-       if (this.isNode(c) && c.size === 0 && !isAuto) numSize = 1;
+       let isString = (typeof s === 'string');
+       
+       let numSize = isString ? 0 : Number(s);
+       if (this.isNode(c) && c.size === 0 && !isString) numSize = 1;
 
        let r = numSize / tw; 
 
+       let stringWidth = 0;
+       if (isString) {
+           this._strCounter++;
+           stringWidth = AUTO_SIZE + (this._strCounter * 0.0000001);
+           this._strMap.set(stringWidth, s as string); 
+       }
+
        if (n.type === 'col') {
-          let cw = isAuto ? AUTO_SIZE : (w * r);
+          let cw = isString ? stringWidth : (w * r);
           this.calc(c, pos, y, cw, h, leaves, skip, offs); 
           pos += cw;
        } else {
-          let ch = isAuto ? AUTO_SIZE : (h * r);
+          let ch = isString ? stringWidth : (h * r);
           this.calc(c, x, pos, w, ch, leaves, skip, offs); 
           pos += ch;
        }
@@ -207,17 +232,45 @@ export const Engine = {
   },
 
   mesh(leaves: Rect[]) {
-    let rx = [0, 100], ry = [0, 100];
-    leaves.forEach(r => { rx.push(r.x, r.x + r.w); ry.push(r.y, r.y + r.h); });
+    this._strCounter = 0; 
     
-    const dedup = (a: number[]) => [...new Set(a.sort((a,b)=>a-b))].filter((v,i,s)=>i===0|| Math.abs(v-s[i-1]) > (AUTO_SIZE/10));
-    const xc = dedup(rx), yc = dedup(ry);
+    // FIX STARTS HERE
+    let rx = [0], ry = [0]; // Initialize with 0
+    let maxX = 0, maxY = 0;
+
+    leaves.forEach(r => { 
+        rx.push(r.x, r.x + r.w); 
+        ry.push(r.y, r.y + r.h); 
+        
+        // Track maximum coordinate used
+        if(r.x + r.w > maxX) maxX = r.x + r.w;
+        if(r.y + r.h > maxY) maxY = r.y + r.h;
+    });
+    
+    // Only push 100 if the layout actually extends that far.
+    // Pure 'auto' layouts have microscopic coordinates (< 1).
+    if (maxX > 1) rx.push(100);
+    if (maxY > 1) ry.push(100);
+    // FIX ENDS HERE
+
+    const dedup = (arr: number[]) => [...new Set(arr.sort((a,b)=>a-b))].filter((v,i,s)=>i===0|| Math.abs(v-s[i-1]) > 0.00000001);
+    const xc = dedup(rx);
+    const yc = dedup(ry);
 
     const getTracks = (cuts: number[]) => {
         const tracks = [];
         for(let i=1; i<cuts.length; i++) {
             let size = cuts[i] - cuts[i-1];
-            if (Math.abs(size - AUTO_SIZE) < 0.0000001) tracks.push('auto');
+            
+            let foundString = null;
+            for (let [k, v] of this._strMap) {
+                if (Math.abs(size - k) < 0.00000001) {
+                    foundString = v;
+                    break;
+                }
+            }
+
+            if (foundString) tracks.push(foundString);
             else tracks.push(size + 'fr');
         }
         return tracks;

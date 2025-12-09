@@ -1,589 +1,280 @@
 <!DOCTYPE html>
 <html lang="en">
-
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Rowscolumns - Native Grid Layout</title>
+    <title>Rowscolumns - The Logical Layout Engine</title>
     
-    <style type="text/css">
-        /* =========================================
-           1. RESET & TYPOGRAPHY (Apple Style)
-           ========================================= */
-        * { box-sizing: border-box; margin: 0; padding: 0; scroll-behavior: smooth; }
+    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;700&family=JetBrains+Mono:wght@400;700&display=swap" rel="stylesheet">
+    <style>
+        /* --- THEME VARIABLES --- */
+        :root {
+            /* Dark Mode (Default) */
+            --bg: #050505; 
+            --surface: #111; 
+            --border: #222;
+            --primary: #f0513e; 
+            --text-main: #ededed; 
+            --text-muted: #888;
+            --code-bg: #1a1a1a;
+            --btn-text: #000;
+            --btn-bg: #fff;
+            --wireframe: rgba(255,255,255,0.03);
+            --wireframe-border: #333;
+        }
+
+        html.light-mode {
+            /* Light Mode Overrides */
+            --bg: #ffffff;
+            --surface: #f7f7f7;
+            --border: #e0e0e0;
+            --text-main: #111111;
+            --text-muted: #666666;
+            --code-bg: #222;
+            --btn-text: #fff;
+            --btn-bg: #111;
+            --wireframe: rgba(0,0,0,0.03);
+            --wireframe-border: #ddd;
+        }
+
+        /* --- BASE STYLES --- */
+        * { box-sizing: border-box; transition: background-color 0.3s, border-color 0.3s, color 0.3s; }
+        body { background-color: var(--bg); color: var(--text-main); font-family: 'Inter', sans-serif; margin: 0; }
+        .container { max-width: 1100px; margin: 0 auto; padding: 0 20px; }
+        a { text-decoration: none; color: inherit; }
+        a:hover { color: var(--primary); }
+
+        /* --- UI ELEMENTS --- */
+        .btn { padding: 12px 24px; border-radius: 6px; font-weight: 500; background: var(--btn-bg); color: var(--btn-text); display: inline-block; border: 1px solid transparent;}
+        .btn:hover { opacity: 0.8; }
         
-        body { 
-            font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, Helvetica, Arial, sans-serif, "Apple Color Emoji", "Segoe UI Emoji", "Segoe UI Symbol";
-            color: #1d1d1f; /* Apple Dark Grey */
-            background: #ffffff;
-            margin: 0;
-            line-height: 1.6;
-            -webkit-font-smoothing: antialiased;
-        }
-
-        /* =========================================
-           2. LAYOUT STRUCTURE
-           ========================================= */
-        .wrapper {
-            max-width: 1200px;
-            margin: 0 auto;
-            padding: 0 20px;
-            display: flex;
-            gap: 30px; /* Space between sidebar and content */
-        }
-
-        /* --- SIDEBAR (Desktop) --- */
-        .sidebar {
-            width: 220px;
-            flex-shrink: 0;
-            position: sticky;
-            top: 40px;
-            height: calc(100vh - 80px);
-            overflow-y: auto;
-            padding-right: 20px;
-            /* Thin border separation */
-            border-right: 1px solid #f0f0f0; 
-            display: none; /* Hidden on mobile */
-        }
-
-        /* Show sidebar only on larger screens */
-        @media (min-width: 1024px) {
-            .sidebar { display: block; }
-        }
-
-        /* Sidebar Links */
-        .toc-header {
-            font-size: 11px;
-            font-weight: 700;
-            text-transform: uppercase;
-            color: #86868b;
-            margin: 25px 0 10px 0;
-            letter-spacing: 0.05em;
-        }
-
-        .toc-link {
-            display: block;
-            text-decoration: none;
-            color: #424245;
-            font-size: 14px;
-            padding: 6px 0;
-            transition: all 0.2s;
-            border-left: 2px solid transparent;
-            padding-left: 15px;
-            margin-bottom: 2px;
-        }
-
-        .toc-link:hover { color: #000; }
+        .code-box { font-family: 'JetBrains Mono'; background: var(--code-bg); padding: 12px; border-radius: 6px; border: 1px solid #333; color: #aaa; font-size: 0.85rem;}
         
-        .toc-link.active {
-            color: #f0513e;
-            font-weight: 600;
-            border-left-color: #f0513e;
+        .card { 
+            background: var(--surface); border: 1px solid var(--border); 
+            border-radius: 12px; padding: 30px; display: flex; flex-direction: column; justify-content: center; 
+            backdrop-filter: blur(10px); 
         }
+        .card:hover { border-color: var(--primary); transform: translateY(-2px); }
 
-        /* --- CONTENT AREA --- */
-        .content {
-            flex-grow: 1;
-            min-width: 0; /* Prevents flex overflow */
-            padding-top: 40px;
-            padding-bottom: 100px;
+        /* Wireframe Look for Demos */
+        .wireframe-box {
+            background: var(--wireframe); border: 1px dashed var(--wireframe-border);
+            border-radius: 8px; display: flex; align-items: center; justify-content: center;
+            font-family: 'JetBrains Mono', monospace; font-size: 0.8rem; color: var(--text-muted);
         }
+        .wireframe-box.fill { background: rgba(240, 81, 62, 0.1); border-color: var(--primary); color: var(--primary); border-style: solid;}
 
-        /* =========================================
-           3. TEXT STYLES
-           ========================================= */
-        h1 { font-size: 48px; font-weight: 700; letter-spacing: -0.02em; margin-top: 0; margin-bottom: 15px; color: #000; line-height: 1.1; }
-        h2 { font-size: 30px; font-weight: 600; letter-spacing: -0.01em; margin-top: 60px; margin-bottom: 20px; color: #000; scroll-margin-top: 40px; }
-        h3 { font-size: 20px; font-weight: 600; margin-top: 35px; margin-bottom: 10px; color: #1d1d1f; }
+        h1 { font-size: 3.5rem; letter-spacing: -0.04em; margin: 0 0 20px 0; background: linear-gradient(to bottom right, var(--text-main), var(--text-muted)); -webkit-background-clip: text; -webkit-text-fill-color: transparent;}
+        h2 { font-size: 2rem; margin: 0 0 10px 0; }
+        h3 { font-size: 1.1rem; margin: 0 0 10px 0; font-weight: 600; }
         
-        p, li { 
-            font-size: 17px; 
-            font-weight: 400; 
-            color: #333; 
-            margin-bottom: 16px; 
-            letter-spacing: 0.01em;
-        }
+        /* --- NAV SPECIFIC --- */
+        .nav-link { font-size: 0.9rem; color: var(--text-muted); font-weight: 500; }
+        .nav-link:hover { color: var(--primary); }
+        .icon-btn { background: transparent; border: 1px solid var(--border); color: var(--text-main); border-radius: 6px; cursor: pointer; padding: 6px; display:flex; align-items:center; justify-content:center;}
+        .icon-btn:hover { background: var(--surface); border-color: var(--text-muted); }
 
-        a { color: #f0513e; text-decoration: none; font-weight: 500; transition: opacity 0.2s; }
-        a:hover { text-decoration: underline; opacity: 0.8; }
-
-        /* The main color accent */
-        .maincolor { 
-            color: #f0513e; 
-            font-weight: 600; 
-            font-size: 1.1rem; 
-            text-transform: uppercase; 
-            letter-spacing: 1px; 
-            margin-bottom: 20px; 
-        }
-
-        /* =========================================
-           4. CODE BLOCKS & DEMOS
-           ========================================= */
-        pre.clean {
-            background: #f5f5f7;
-            padding: 20px;
-            border-radius: 12px;
-            font-family: 'SF Mono', 'Menlo', 'Monaco', 'Courier New', monospace;
-            font-size: 14px;
-            line-height: 1.5;
-            overflow-x: auto;
-            margin: 20px 0;
-            color: #333;
-            border: 1px solid rgba(0,0,0,0.04);
-        }
-        
-        code {
-            font-family: 'SF Mono', 'Menlo', 'Monaco', 'Courier New', monospace;
-            background: rgba(240, 81, 62, 0.08);
-            color: #d63320;
-            padding: 2px 6px;
-            border-radius: 4px;
-            font-size: 0.9em;
-        }
-
-        /* =========================================
-           5. ROWSCOLUMNS GRID STYLES
-           ========================================= */
-        /* Container margin */
-        .grid-container { width: 100%; margin-bottom: 40px; }
-        
-        /* Engine Targets */
-        [layout], [layout-sm], [layout-md], [layout-lg] {
-            display: grid; width: 100%; align-content: start; 
-        }
-
-        /* Default Box Style for Layout Children */
-        [layout] > div {
-            padding: 20px;
-            background: #fff;
-            overflow: hidden;
-            border: 1px solid #e5e5e5;
-            border-radius: 8px;
-        }
-
-        /* Remove borders for Header Section specifically */
-        .header-container[layout] > div { 
-            border: none !important; 
-            background: transparent !important; 
-            padding: 10px 0; 
-        }
-
-        /* Visual Demo Boxes (Inside the grids) */
-        .demo-box { 
-            background: #fafafa; 
-            border: 1px solid #e0e0e0;
-            display: flex; 
-            align-items: center; 
-            justify-content: center; 
-            font-weight: 600; 
-            color: #888; 
-            height: 100%; 
-            border-radius: 6px;
-            font-size: 12px;
-            text-align: center;
-        }
-        .demo-box.filled {
-            background: #f0513e;
-            color: white;
-            border: none;
-        }
-
-        /* Utils */
-        .flex-center { display: flex; justify-content: center; align-items: center; flex-direction: column; }
-        .tr { text-align: right; }
-        .note { font-size: 14px; color: #86868b; margin-top: 8px; font-style: italic; }
-        ul { padding-left: 20px; color: #484848; }
-
-        /* Mobile Adjustments */
-        @media (max-width: 768px) {
-            h1 { font-size: 36px; }
-            .tr { text-align: left; }
-            .header-container { text-align: center; }
-            .header-container img { align-self: center; }
-        }
+        /* Native Grid Override */
+        [layout], [layout-md] { display: grid; width: 100%; }
+        @media (max-width: 768px) { h1 { font-size: 2.5rem; } }
     </style>
 
-    <!-- LIBRARY LOADING -->
-    <script type="module">
-        import { Engine, Grid, lg, sm, auto } from 'https://unpkg.com/rowscolumns@1.2.9/dist/index.mjs';
-        
-        // Expose to Window for HTML attributes
-        window.Grid = Grid;
-        window.lg = lg;
-        window.sm = sm;
-        window.auto = auto;
-        
-        // Start Engine
+     <script type="module">
+        // 1. Import the Engine from your built file
+        import { Engine } from './dist/index.mjs';
+
+        // 2. Initialize the Engine
+        // (This installs the .col/.row extensions and starts the resize listener)
         Engine.init();
+
+        console.log("RowsColumns Engine Initialized!");
+    </script>
+
+    <script>
+        function toggleTheme() {
+            document.documentElement.classList.toggle('light-mode');
+        }
     </script>
 </head>
-
 <body>
 
-<div class="wrapper">
-    
-    <!-- === SIDEBAR NAVIGATION === -->
-    <nav class="sidebar">
-        <div style="margin-bottom: 40px; margin-top: 10px;">
-            <img src="logo.png" width="50px" style="opacity:0.9;">
+    <!-- NAV (No Changes) -->
+    <nav style="position: sticky; top: 0; background: var(--bg); border-bottom: 1px solid var(--border); z-index: 100;">
+        <div class="container" layout="Grid.col(auto, auto, auto, 1, auto, auto).props({alignItems:'center', height: '65px',gap:'10px'}).offset([4])">
+            <div><img src="logo.png" width="28" height="28" style="display:block; border-radius: 4px;"></div>
+            <div style="font-weight: 700; font-size: 1.05rem;">Rowscolumns</div>
+            <div><a href="docs.html" class="nav-link">Docs</a></div>
+            <div>
+                <a href="https://github.com/abhimm5/rowscolumns" class="nav-link" aria-label="GitHub">
+                    <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M9 19c-5 1.5-5-2.5-7-3m14 6v-3.87a3.37 3.37 0 0 0-.94-2.61c3.14-.35 6.44-1.54 6.44-7A5.44 5.44 0 0 0 20 4.77 5.07 5.07 0 0 0 19.91 1S18.73.65 16 2.48a13.38 13.38 0 0 0-7 0C6.27.65 5.09 1 5.09 1A5.07 5.07 0 0 0 5 4.77a5.44 5.44 0 0 0-1.5 3.78c0 5.42 3.3 6.61 6.44 7A3.37 3.37 0 0 0 9 18.13V22"></path></svg>
+                </a>
+            </div>
+            <div>
+                <button class="icon-btn" onclick="toggleTheme()" aria-label="Toggle Theme">
+                    <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="12" r="5"></circle><line x1="12" y1="1" x2="12" y2="3"></line><line x1="12" y1="21" x2="12" y2="23"></line><line x1="4.22" y1="4.22" x2="5.64" y2="5.64"></line><line x1="18.36" y1="18.36" x2="19.78" y2="19.78"></line><line x1="1" y1="12" x2="3" y2="12"></line><line x1="21" y1="12" x2="23" y2="12"></line><line x1="4.22" y1="19.78" x2="5.64" y2="18.36"></line><line x1="18.36" y1="5.64" x2="19.78" y2="4.22"></line></svg>
+                </button>
+            </div>
         </div>
-
-        <div class="toc-header">Overview</div>
-        <a href="#intro" class="toc-link">Introduction</a>
-        <a href="#install" class="toc-link">Installation</a>
-
-        <div class="toc-header">Core Concepts</div>
-        <a href="#basics" class="toc-link">Basics</a>
-        <a href="#native" class="toc-link">Native Features</a>
-        <a href="#layouts" class="toc-link">Layout Patterns</a>
-        <a href="#custom" class="toc-link">Customisation</a>
-        <a href="#utils" class="toc-link">Styling & Utilities</a>
-
-        <div class="toc-header">Development</div>
-        <a href="#responsive" class="toc-link">Responsive</a>
-        <a href="#frameworks" class="toc-link">React & Vue</a>
     </nav>
 
-    <!-- === MAIN CONTENT === -->
-    <div class="content">
+    <!-- 
+       EXPANDED RECURSIVE LAYOUT
+       This giant layout string controls the entire page structure.
+       
+       1. Hero (Split 60/40)
+       2. Title (Auto)
+       3. Bento Box (Split 40 / 60-Recursive)
+       4. 2D Visualizer Title (Auto)
+       5. 2D Visualizer Demo (Complex Nesting)
+       6. Comparison Title (Auto)
+       7. Comparison Table (Split 30/70)
+       8. Footer (Split 40/20/20/20)
+    -->
+    <main class="container" 
+          layout="Grid.row(
+              (auto).col(60, 40),               
+              auto,                             
+              ('400px').col(40, (60).row(1, 1)), 
+              auto,
+              ('400px').col(25, (50).row(30, 70), 25),
+              auto,
+              (auto).col(25, 25, 25, 25),
+              (auto).col(30, 70),               
+              auto                              
+          ).props({gap: '80px 40px', paddingTop: '80px', paddingBottom: '40px'})"
 
-        <!-- HEADER (No borders) -->
-        <section id="header-area">
-            <div layout-sm="Grid.col(25,(75).row(sm,auto)).props({gap:'40px'})" 
-                 class="grid-container header-container" 
-                 layout="Grid.row(auto.col(auto, auto),auto)"> 
-                
-                <div class="flex-center tr" style="border:none !important;">
-                    <img src="logo.png" width="70px" alt="Logo" style="margin-bottom:10px; align-self: end;">
-                </div>
-                
-                <div style="border:none !important;">
-                    <h1>Rows & Columns</h1>
-                    <p style="font-size: 1.3rem; color: #86868b; margin-bottom: 5px;">The Native Javascript Layout Engine</p> 
-                </div>
-                
-                <div style="border:none !important; display: flex; align-items: center;">
-                    <a href="https://github.com/abhimm5/rowscolumns" style="font-weight: 600;">View on GitHub &rarr;</a>
-                </div>
+          layout-md="Grid.col(100).props({gap: '60px', paddingTop: '40px'})">
+
+        <!-- 1. HERO -->
+        <div style="display: flex; flex-direction: column; justify-content: center;">
+            <div style="color: var(--primary); letter-spacing: 2px; font-weight: 700; margin-bottom: 20px;">NATIVE LAYOUT ENGINE</div>
+            <h1>Stop fighting CSS.<br>Start coding Layouts.</h1>
+            <p style="color:var(--text-muted); margin-bottom: 30px;">A recursive, zero-dependency layout engine. Write geometry using native JavaScript logic.</p>
+            <div style="display: flex; gap: 15px; align-items: center;">
+                <a href="docs.html" class="btn">Get Started</a>
+                <div class="code-box">npm install rowscolumns</div>
             </div>
-        </section>
+        </div>
+        
+        <div class="code-box" style="padding: 20px; color: #ccc; box-shadow: 0 30px 60px -10px rgba(0,0,0,0.5); align-self: center;">
+            &lt;Layout<br>&nbsp;&nbsp;layout={Grid.col(lg, sm)}<br>&nbsp;&nbsp;children={flat}<br>/&gt;
+        </div>
 
-        <!-- INTRODUCTION -->
-        <section id="intro">
-            <div class="grid-container" layout="Grid.col(100)" layout-md="Grid.col(25, 75).props({gap:'40px'})">
-                <div style="border:none !important; padding:0;">
-                    <div class="maincolor">Introduction</div>
-                </div>
-                <div style="border:none !important; padding:0;">
-                    <h2 style="margin-top:0;">Why Row Column?</h2>
-                    <p>
-                        Rows &amp; Columns is a JavaScript layout framework built on CSS Grid line placement,
-                        giving you fine-grained control over child <code>&lt;div&gt;</code> elements. While many
-                        developers prefer crafting custom layouts, building complex grids can become a headache due to
-                        deep nesting and hard-to-manage markup.
-                    </p>
-                    
-                    <h3>Two dimensional</h3>
-                    <p>
-                        This framework is designed to simplify layout design with minimal effort. Unlike approaches that rely
-                        on numerous wrappers like <code>&lt;div class="row"&gt;</code>, it embraces a fully two-dimensional model.
-                    </p>
-                    <p>
-                        In version <strong>v1.2.0</strong>, you can write real JavaScript logic directly in HTML attributes
-                        without using <code>eval</code> or regex-based parsers.
-                    </p>
-                    <pre class="clean">&lt;div layout="Grid.col(30, 70)"&gt;
-    &lt;div&gt;Sidebar&lt;/div&gt;
-    &lt;div&gt;Content&lt;/div&gt;
-&lt;/div&gt;</pre>
-                </div>
-            </div>
-        </section>
+        <!-- 2. TITLE -->
+        <div style="text-align: center;">
+            <h2>Built with Logic</h2>
+            <p>The layout below is generated recursively.</p>
+            <code style="color: var(--primary); border:1px solid var(--border); padding: 4px 8px; border-radius:4px;">Grid.col(40, (60).row(50, 50))</code>
+        </div>
 
-        <!-- INSTALLATION -->
-        <section id="install">
-            <div class="grid-container" layout="Grid.col(100)" layout-md="Grid.col(25, 75).props({gap:'40px'})">
-                <div style="border:none !important; padding:0;">
-                     <div class="maincolor">Getting Started</div>
-                </div>
-                <div style="border:none !important; padding:0;">
-                    <h2 style="margin-top:0;">Installation</h2>
-                    <p>Zero dependencies. 5KB minified.</p>
-                    
-                    <p><strong>1. NPM (Recommended):</strong> </p>
-                    <pre class="clean">npm install rowscolumns</pre>
-                    
-                    <p><strong>2. CDN (Vanilla HTML):</strong></p>
-                    <pre class="clean">&lt;script type="module"&gt;
-  import { Engine } from 'https://unpkg.com/rowscolumns';
-  Engine.init();
-&lt;/script&gt;</pre>
-                </div>
-            </div>
-        </section>
+        <!-- 3. BENTO GRID -->
+        <div class="card">
+            <div style="font-size: 2rem; margin-bottom:10px;">⚡</div>
+            <h3>Native Speed</h3>
+            <p style="margin:0; font-size: 0.9rem; color: var(--text-muted);">Runs on the browser's JS engine. No regex parsing overhead.</p>
+        </div>
+        <div class="card">
+            <div style="font-size: 2rem; margin-bottom:10px;">📐</div>
+            <h3>Recursive Geometry</h3>
+            <p style="margin:0; font-size: 0.9rem; color: var(--text-muted);">Nest rows inside columns infinitely. Just like math.</p>
+        </div>
+        <div class="card">
+            <div style="font-size: 2rem; margin-bottom:10px;">👻</div>
+            <h3>Ghost Offsets</h3>
+            <p style="margin:0; font-size: 0.9rem; color: var(--text-muted);">Use <code>.offset()</code> to skip grid slots mathematically.</p>
+        </div>
 
-        <!-- BASICS -->
-        <section id="basics">
-            <div class="grid-container" layout="Grid.col(100)" layout-md="Grid.col(25, 75).props({gap:'40px'})">
-                <div style="border:none !important; padding:0;">
-                    <div class="maincolor">Basics</div>
-                </div>
-                <div style="border:none !important; padding:0;">
-                    <h2 style="margin-top:0;">Calling function</h2>
-                    
-                    <h3>Grid.col() & Grid.row()</h3>
-                    <p>The library extends <code>Number.prototype</code>. <code>Grid</code> is a constant for <code>100</code>.</p>
-                    
-                    <h3>Parameters</h3>
-                    <ul>
-                        <li><strong>.col( ...sizes )</strong>: Divides the space vertically (creates columns).</li>
-                        <li><strong>.row( ...sizes )</strong>: Divides the space horizontally (creates rows).</li>
-                    </ul>
-                    <p>These functions take numbers (or variables) as arguments.</p>
+        <!-- 4. NEW: 2D VISUALIZER TITLE -->
+        <div style="text-align: center;">
+            <h2>True 2D Layouts</h2>
+            <p>Define complex dashboards in a single line. Visualized below.</p>
+            <code style="color: var(--primary); border:1px solid var(--border); padding: 4px 8px; border-radius:4px;">Grid.col(25, (50).row(30, 70), 25)</code>
+        </div>
 
-                    <h3>Example</h3>
-                    <p>You can call this function like the example <code>Grid.col(60, 40)</code>. Here <code>Grid</code> is a constant for <code>100</code>.</p>
-                    <pre class="clean">&lt;div layout="Grid.col(60, 40)"&gt;</pre>
-                    
-                    <h3>Nesting (Recursion)</h3>
-                    <p>To divide into three parts or complex grids, you simply nest the functions. For example: <code>Grid.col(60, (40).row(20, 20))</code>.</p>
-                </div>
-            </div>
-        </section>
+        <!-- 5. NEW: 2D VISUALIZER DEMO (Wireframes) -->
+        <div class="wireframe-box fill">Sidebar (25%)</div>
+        
+        <!-- Middle Column (Split into 2 Rows) -->
+        <!-- Note: The Layout engine puts the next 2 divs here automatically -->
+        <div class="wireframe-box">Header (30%)</div>
+        <div class="wireframe-box">Content Body (70%)</div>
+        
+        <div class="wireframe-box fill">Widget Panel (25%)</div>
 
-        <!-- NATIVE FEATURES -->
-        <section id="native">
-            <div class="grid-container" layout="Grid.col(100)" layout-md="Grid.col(25, 75).props({gap:'40px'})">
-                <div style="border:none !important; padding:0;">
-                    <div class="maincolor">Native Features</div>
-                </div>
-                <div style="border:none !important; padding:0;">
-                    <h2 style="margin-top:0;">Native Power</h2>
-                    
-                    <h3>1. Native Math</h3>
-                    <p>Because v1.2.0 uses native execution, you can use math directly. No manual percentages.</p>
-                    <pre class="clean">&lt;div layout="Grid.col(100/3, 100/3, 100/3)"&gt;</pre>
-                    <div layout="Grid.col(100/3, 100/3, 100/3).props({gap:'5px', height:'50px'})" style="border:none; padding:0;">
-                        <div class="demo-box">33.3%</div>
-                        <div class="demo-box">33.3%</div>
-                        <div class="demo-box">33.3%</div>
-                    </div>
 
-                    <h3>2. Variables</h3>
-                    <p>The engine provides built-in variables: <code>lg</code> (61.8) and <code>sm</code> (38.2).</p>
-                    <pre class="clean">&lt;div layout="Grid.col(lg, sm)"&gt;</pre>
+        <!-- 6. FEATURES TITLE -->
+        <div>
+            <h2>Why Rowscolumns?</h2>
+        </div>
 
-                    <h3>3. Global Functions</h3>
-                    <p>You can define a layout function in your script and call it in HTML.</p>
-                    <pre class="clean">
-&lt;script&gt;
-  window.myLayout = (gap) => Grid.col(50, 50).props({ gap });
-&lt;/script&gt;
-&lt;div layout="myLayout('20px')"&gt;</pre>
-                </div>
-            </div>
-        </section>
+        <!-- 7. FEATURES GRID (4 Columns) -->
+        <div>
+            <div style="color: var(--primary); font-weight:700; margin-bottom:5px;">4KB Gzipped</div>
+            <p style="font-size:0.9rem;">Tiny footprint. Zero dependencies.</p>
+        </div>
+        <div>
+            <div style="color: var(--primary); font-weight:700; margin-bottom:5px;">TypeScript</div>
+            <p style="font-size:0.9rem;">First-class type definitions included.</p>
+        </div>
+        <div>
+            <div style="color: var(--primary); font-weight:700; margin-bottom:5px;">Framework Agnostic</div>
+            <p style="font-size:0.9rem;">Works with React, Vue, Svelte, Vanilla.</p>
+        </div>
+        <div>
+            <div style="color: var(--primary); font-weight:700; margin-bottom:5px;">Zero CSS</div>
+            <p style="font-size:0.9rem;">No class names to memorize. Just logic.</p>
+        </div>
 
-        <!-- LAYOUTS -->
-        <section id="layouts">
-            <div class="grid-container" layout="Grid.col(100)" layout-md="Grid.col(25, 75).props({gap:'40px'})">
-                <div style="border:none !important; padding:0;">
-                    <div class="maincolor">Layout Patterns</div>
-                </div>
-                <div style="border:none !important; padding:0;">
-                    <h2 style="margin-top:0;">Unleashing the Power</h2>
-                    
-                    <h3>1. The "Holy Grail" Layout</h3>
-                    <p>The classic web layout: Header, Footer, and a body split into Sidebar and Content.</p>
-                    <pre class="clean">&lt;div layout="Grid.row(15, (70).col(25, 75), 15)"&gt;</pre>
-                    <div layout="Grid.row(15, (70).col(25, 75), 15).props({gap:'5px', height:'200px'})" style="border:none; padding:0;">
-                        <div class="demo-box filled">Header</div>
-                        <div class="demo-box">Sidebar</div>
-                        <div class="demo-box">Content</div>
-                        <div class="demo-box filled">Footer</div>
-                    </div>
 
-                    <h3>2. The 12-Column System</h3>
-                    <p>Most web designers think in grids of 12. Just use fractions to define the span you want.</p>
-                    <pre class="clean">&lt;div layout="Grid.col(4/12, 8/12)"&gt;</pre>
-                    <div layout="Grid.col(4/12, 8/12).props({gap:'5px', height:'50px'})" style="border:none; padding:0;">
-                        <div class="demo-box">Span 4</div>
-                        <div class="demo-box filled">Span 8</div>
-                    </div>
+        <!-- 8. COMPARISON -->
+        <div>
+            <h2>Compare</h2>
+            <p>Why switch from standard CSS frameworks?</p>
+        </div>
 
-                    <h3>3. Deep Recursion (Mondrian Style)</h3>
-                    <p>You can nest infinitely. Split a column into rows, then split one of those rows into columns.</p>
-                    <pre class="clean">&lt;div layout="Grid.col(50, (50).row(50, (50).col(50, 50)))"&gt;</pre>
-                    <div layout="Grid.col(50, (50).row(50, (50).col(50, 50))).props({gap:'5px', height:'180px'})" style="border:none; padding:0;">
-                        <div class="demo-box filled">Left</div>
-                        <div class="demo-box">Top</div>
-                        <div class="demo-box">Btm Left</div>
-                        <div class="demo-box">Btm Right</div>
-                    </div>
-                </div>
-            </div>
-        </section>
+        <div layout="Grid.col(1, 1, 1).props({gap:'0 20px'})">
+             <div style="font-weight:bold; border-bottom:1px solid var(--border); padding:10px 0;">Feature</div>
+             <div style="font-weight:bold; border-bottom:1px solid var(--border); padding:10px 0;">RC</div>
+             <div style="font-weight:bold; border-bottom:1px solid var(--border); padding:10px 0;">CSS</div>
+             
+             <div style="padding:15px 0; color:var(--text-muted); border-bottom:1px solid var(--border);">Logic</div>
+             <div style="padding:15px 0; color:var(--primary); border-bottom:1px solid var(--border);">✔ Native JS</div>
+             <div style="padding:15px 0; color:var(--text-muted); border-bottom:1px solid var(--border);">❌ Classes</div>
+             
+             <div style="padding:15px 0; color:var(--text-muted);">Recursion</div>
+             <div style="padding:15px 0; color:var(--primary);">✔ Infinite</div>
+             <div style="padding:15px 0; color:var(--text-muted);">❌ Complex</div>
+        </div>
 
-        <!-- CUSTOMISATION -->
-        <section id="custom">
-            <div class="grid-container" layout="Grid.col(100)" layout-md="Grid.col(25, 75).props({gap:'40px'})">
-                <div style="border:none !important; padding:0;">
-                    <div class="maincolor">Customisation</div>
-                </div>
-                <div style="border:none !important; padding:0;">
-                    <h2 style="margin-top:0;">Splitting</h2>
-                    
-                    <h3>Rational Division</h3>
-                    <p>To divide a number into two equal parts, we use <code>Grid.col(1/2, 1/2)</code>. To make three columns, we use <code>Grid.col(1/3, 1/3, 1/3)</code>.</p>
-                    
-                    <h3>Easy Recursive Loops</h3>
-                    <p>To make 12 equal columns manually would be tedious. Because v1.2.0 uses native JS, you can generate arrays dynamically!</p>
-                    <pre class="clean">&lt;script&gt;
-  window.twelveCols = Array(12).fill(1); 
-&lt;/script&gt;
-&lt;div layout="Grid.col(...twelveCols)"&gt;</pre>
-                    
-                    <div layout="Grid.col(...Array(12).fill(1)).props({gap:'2px', height:'40px'})" style="border:none; padding:0;">
-                        <div class="demo-box">1</div><div class="demo-box">2</div><div class="demo-box">3</div>
-                        <div class="demo-box">4</div><div class="demo-box">5</div><div class="demo-box">6</div>
-                        <div class="demo-box">7</div><div class="demo-box">8</div><div class="demo-box">9</div>
-                        <div class="demo-box">10</div><div class="demo-box">11</div><div class="demo-box">12</div>
-                    </div>
+        <!-- 9. EXPANDED FOOTER -->
+        <!-- Logic: Col(40, 20, 20, 20) defined in parent Grid.row -->
+        <div style="border-top: 1px solid var(--border); padding-top: 30px;">
+             <div style="font-weight: 700; margin-bottom: 10px;">Rowscolumns</div>
+             <p style="font-size: 0.9rem;">The logical layout engine for the modern web.</p>
+             <div style="font-size: 0.8rem; opacity: 0.5;">© 2025 MIT License</div>
+        </div>
 
-                    <h3>Controlling Dimensions</h3>
-                    <p>The number <code>Grid</code> (or 100) defines the <strong>ratio weights</strong>, not the actual pixel size. To change dimensions, apply CSS using <code>.props()</code>.</p>
-                    <pre class="clean">&lt;div layout="Grid.col(50, 50).props({ width: '50%' })"&gt;</pre>
-                </div>
-            </div>
-        </section>
+        <div style="border-top: 1px solid var(--border); padding-top: 30px; font-size: 0.9rem; color: var(--text-muted);">
+            <div style="font-weight: 600; color: var(--text-main); margin-bottom: 10px;">Docs</div>
+            <div style="margin-bottom:5px;"><a href="docs.html#install">Install</a></div>
+            <div style="margin-bottom:5px;"><a href="docs.html#basics">Basics</a></div>
+            <div style="margin-bottom:5px;"><a href="docs.html#react">React</a></div>
+        </div>
 
-        <!-- UTILITIES -->
-        <section id="utils">
-            <div class="grid-container" layout="Grid.col(100)" layout-md="Grid.col(25, 75).props({gap:'40px'})">
-                <div style="border:none !important; padding:0;">
-                    <div class="maincolor">Utilities</div>
-                </div>
-                <div style="border:none !important; padding:0;">
-                    <h2 style="margin-top:0;">Styling & Methods</h2>
-                    
-                    <h3>.props({ styles })</h3>
-                    <p>Apply CSS to the grid container (like gap, padding, margins).</p>
-                    <pre class="clean">Grid.col(50, 50).props({ gap: '20px', padding: '10px' })</pre>
+        <div style="border-top: 1px solid var(--border); padding-top: 30px; font-size: 0.9rem; color: var(--text-muted);">
+            <div style="font-weight: 600; color: var(--text-main); margin-bottom: 10px;">Community</div>
+            <div style="margin-bottom:5px;"><a href="https://github.com/abhimm5/rowscolumns">GitHub</a></div>
+            <div style="margin-bottom:5px;"><a href="#">NPM</a></div>
+        </div>
 
-                    <h3>.childProps({ styles }, [indices])</h3>
-                    <p>Apply CSS to specific children. Indices are 1-based.</p>
-                    <pre class="clean">Grid.col(30, 30, 30).childProps({ background: 'salmon' }, [2])</pre>
-                    <div layout="Grid.col(30, 30, 30).childProps({ background: '#f0513e', color: 'white', border:'none' }, [2]).props({gap:'5px', height:'50px'})" style="border:none; padding:0;">
-                        <div class="demo-box">1</div>
-                        <div class="demo-box">2</div>
-                        <div class="demo-box">3</div>
-                    </div>
+        <div style="border-top: 1px solid var(--border); padding-top: 30px; font-size: 0.9rem; color: var(--text-muted);">
+            <div style="font-weight: 600; color: var(--text-main); margin-bottom: 10px;">More</div>
+            <div style="margin-bottom:5px;"><a href="#">Blog</a></div>
+            <div style="margin-bottom:5px;"><a href="#">Showcase</a></div>
+        </div>
 
-                    <h3>.offset([indices])</h3>
-                    <p>Creates "Ghost" slots. This skips a grid cell, so your HTML element lands in the next available slot.</p>
-                    <pre class="clean">Grid.col(30, 30, 30).offset([2])</pre>
-                    <div layout="Grid.col(30, 30, 30).offset([2]).props({gap:'5px', height:'50px'})" style="border:none; padding:0;">
-                        <div class="demo-box">1</div>
-                        <!-- Empty -->
-                        <div class="demo-box filled">3 (Moved)</div>
-                    </div>
-                </div>
-            </div>
-        </section>
-
-        <!-- RESPONSIVE -->
-        <section id="responsive">
-            <div class="grid-container" layout="Grid.col(100)" layout-md="Grid.col(25, 75).props({gap:'40px'})">
-                <div style="border:none !important; padding:0;">
-                    <div class="maincolor">Responsive</div>
-                </div>
-                <div style="border:none !important; padding:0;">
-                    <h2 style="margin-top:0;">Breakpoints</h2>
-                    <p>Rowscolumns uses specific attributes for breakpoints.</p>
-                    <ul>
-                        <li><code>layout</code> (Mobile / Default)</li>
-                        <li><code>layout-sm</code> (≥ 576px)</li>
-                        <li><code>layout-md</code> (≥ 768px)</li>
-                        <li><code>layout-lg</code> (≥ 992px)</li>
-                        <li><code>layout-xl</code> (≥ 1200px)</li>
-                    </ul>
-                    <pre class="clean">&lt;div 
-  layout="Grid.col(100)"             // Mobile: Stacked
-  layout-md="Grid.col(50, 50)"       // Tablet: 2 Cols
-  layout-xl="Grid.col(33, 33, 33)"   // Desktop: 3 Cols
-&gt;</pre>
-                </div>
-            </div>
-        </section>
-
-        <!-- FRAMEWORKS -->
-        <section id="frameworks">
-            <div class="grid-container" layout="Grid.col(100)" layout-md="Grid.col(25, 75).props({gap:'40px'})">
-                <div style="border:none !important; padding:0;">
-                    <div class="maincolor">Frameworks</div>
-                </div>
-                <div style="border:none !important; padding:0;">
-                    <h2 style="margin-top:0;">React & TypeScript</h2>
-                    <p>Rowscolumns ships with a dedicated React wrapper and full TypeScript definitions.</p>
-                    
-                    <h3>1. The Setup</h3>
-                    <pre class="clean">import React from 'react';
-import { Layout, Grid, lg, sm } from 'rowscolumns/react';</pre>
-
-                    <h3>2. Native Syntax</h3>
-                    <p>Pass real JavaScript objects to the <code>layout</code> prop. No quotes needed.</p>
-                    <pre class="clean">export const App = () => {
-  const sidebar = 250; 
-  
-  return (
-    &lt;Layout layout={Grid.col(sidebar, 'auto')} &gt;
-       &lt;div&gt;Fixed Sidebar&lt;/div&gt;
-       &lt;div&gt;Fluid Content&lt;/div&gt;
-    &lt;/Layout&gt;
-  );
-};</pre>
-                </div>
-            </div>
-        </section>
-
-        <!-- FOOTER -->
-        <section>
-            <div class="grid-container header-container" 
-                 layout="Grid.col(100).props({textAlign:'center', marginTop:'40px'})">
-                <div style="border-top: 1px solid #eee; padding-top: 30px;">
-                    <img src="logo.png" width="40px" style="opacity:0.5; margin-bottom:10px;">
-                    <div style="font-size: 0.9rem; color: #888;">
-                        MIT License &copy; 2024 Rowscolumns.<br>
-                        <a href="https://github.com/abhimm5/rowscolumns" style="color:#666;">View on GitHub</a>
-                    </div>
-                </div>
-            </div>
-        </section>
-
-    </div> <!-- End Content -->
-</div> <!-- End Wrapper -->
-
-<!-- SCROLL TRACKER SCRIPT -->
-<script>
-    document.addEventListener("DOMContentLoaded", () => {
-        const observer = new IntersectionObserver(entries => {
-            entries.forEach(entry => {
-                const id = entry.target.getAttribute('id');
-                const link = document.querySelector(`.toc-link[href="#${id}"]`);
-                
-                if (entry.isIntersecting && link) {
-                    document.querySelectorAll('.toc-link').forEach(l => l.classList.remove('active'));
-                    link.classList.add('active');
-                }
-            });
-        }, { threshold: 0.2 });
-
-        document.querySelectorAll('section[id]').forEach((section) => {
-            observer.observe(section);
-        });
-    });
-</script>
+    </main>
 
 </body>
 </html>
