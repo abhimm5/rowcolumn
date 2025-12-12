@@ -5,6 +5,10 @@ node_modules/
 dist/
 build/
 
+# Development
+react/
+website/
+
 # Logs
 npm-debug.log*
 yarn-debug.log*

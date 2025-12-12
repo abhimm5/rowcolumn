@@ -3,6 +3,14 @@ import { useRef, useEffect } from "react";
 
 // src/core.ts
 var AUTO_SIZE = 1e-6;
+function parseSpread(directions) {
+  const d = { t: 0, r: 0, b: 0, l: 0 };
+  directions.forEach((dir) => {
+    const m = dir.match(/^([trbl])(\d+)$/);
+    if (m) d[m[1]] += parseInt(m[2], 10);
+  });
+  return d;
+}
 var LayoutNode = class _LayoutNode {
   constructor(size, type = "leaf", children = []) {
     this.size = size;
@@ -11,7 +19,10 @@ var LayoutNode = class _LayoutNode {
     this.isSkippedSelf = false;
     this.offsetIndices = [];
     this.styles = {};
-    this.childPropsRules = [];
+    this.spreadData = { t: 0, r: 0, b: 0, l: 0 };
+    // Rules targeting scoped children
+    this.childPropRules = [];
+    this.childSpreadRules = [];
   }
   col(...children) {
     return new _LayoutNode(this.size, "col", children);
@@ -29,12 +40,24 @@ var LayoutNode = class _LayoutNode {
     return this;
   }
   childProps(style, indices) {
-    this.childPropsRules.push({ style, indices: indices || null });
+    this.childPropRules.push({ data: style, indices: indices || null });
+    return this;
+  }
+  spread(directions, indices) {
+    if (indices) {
+      this.childSpreadRules.push({ data: parseSpread(directions), indices });
+    } else {
+      const data = parseSpread(directions);
+      this.spreadData.t += data.t;
+      this.spreadData.r += data.r;
+      this.spreadData.b += data.b;
+      this.spreadData.l += data.l;
+    }
     return this;
   }
 };
 var Rect = class {
-  constructor(x, y, w, h, styles, isSkipped, customSize) {
+  constructor(x, y, w, h, styles, isSkipped, customSize, spread = { t: 0, r: 0, b: 0, l: 0 }) {
     this.x = x;
     this.y = y;
     this.w = w;
@@ -42,6 +65,7 @@ var Rect = class {
     this.styles = styles;
     this.isSkipped = isSkipped;
     this.customSize = customSize;
+    this.spread = spread;
   }
 };
 var installed = false;
@@ -49,42 +73,30 @@ function installExtensions() {
   if (installed) return;
   installed = true;
   const n = (v) => new LayoutNode(v);
-  if (!Number.prototype.col) {
-    const P = Number.prototype;
-    P.col = function(...a) {
-      return new LayoutNode(this, "col", a);
+  const setup = (Proto, isStr = false) => {
+    if (Proto.col) return;
+    const w = (ctx) => n(isStr ? String(ctx) : ctx);
+    Proto.col = function(...a) {
+      return new LayoutNode(isStr ? String(this) : this, "col", a);
     };
-    P.row = function(...a) {
-      return new LayoutNode(this, "row", a);
+    Proto.row = function(...a) {
+      return new LayoutNode(isStr ? String(this) : this, "row", a);
     };
-    P.offset = function(a) {
-      return n(this).offset(a);
+    Proto.offset = function(a) {
+      return w(this).offset(a);
     };
-    P.props = function(s) {
-      return n(this).props(s);
+    Proto.props = function(s) {
+      return w(this).props(s);
     };
-    P.childProps = function(s, a) {
-      return n(this).childProps(s, a);
+    Proto.childProps = function(s, a) {
+      return w(this).childProps(s, a);
     };
-  }
-  if (!String.prototype.col) {
-    const S = String.prototype;
-    S.col = function(...a) {
-      return new LayoutNode(String(this), "col", a);
+    Proto.spread = function(a, i) {
+      return w(this).spread(a, i);
     };
-    S.row = function(...a) {
-      return new LayoutNode(String(this), "row", a);
-    };
-    S.offset = function(a) {
-      return n(String(this)).offset(a);
-    };
-    S.props = function(s) {
-      return n(String(this)).props(s);
-    };
-    S.childProps = function(s, a) {
-      return n(String(this)).childProps(s, a);
-    };
-  }
+  };
+  setup(Number.prototype, false);
+  setup(String.prototype, true);
 }
 var Engine = {
   bps: { sm: 576, md: 768, lg: 992, xl: 1200, xxl: 1400 },
@@ -126,17 +138,10 @@ var Engine = {
     }
     if (!tree) return;
     if (tree.styles) Object.assign(el.style, tree.styles);
-    const domStyles = [];
-    const scan = (n) => {
-      if (this.isNode(n)) {
-        if (n.childPropsRules) domStyles.push(...n.childPropsRules);
-        n.children.forEach(scan);
-      }
-    };
-    scan(tree);
     const leaves = [];
-    this.calc(tree, 0, 0, 100, 100, leaves, false, []);
+    this.calc(tree, 0, 0, 100, 100, leaves, false, [], [], []);
     const { cw, rh, xc, yc } = this.mesh(leaves);
+    el.style.display = "grid";
     el.style.gridTemplateColumns = cw.join(" ");
     el.style.gridTemplateRows = rh.join(" ");
     const kids = Array.from(el.children);
@@ -145,26 +150,27 @@ var Engine = {
       k.style.gridRow = "";
       k.style.cssText = "";
     });
-    kids.forEach((k, i) => {
-      domStyles.forEach((r) => {
-        if (!r.indices || r.indices.includes(i + 1)) Object.assign(k.style, r.style);
-      });
-    });
     let kidIdx = 0;
     leaves.forEach((l) => {
       if (l.isSkipped) return;
       if (!kids[kidIdx]) return;
       const k = kids[kidIdx++];
-      const cs = this.idx(xc, l.x) + 1;
-      const ce = this.idx(xc, l.x + l.w) + 1;
-      const rs = this.idx(yc, l.y) + 1;
-      const re = this.idx(yc, l.y + l.h) + 1;
+      let cs = this.idx(xc, l.x) + 1;
+      let ce = this.idx(xc, l.x + l.w) + 1;
+      let rs = this.idx(yc, l.y) + 1;
+      let re = this.idx(yc, l.y + l.h) + 1;
+      if (l.spread) {
+        cs = Math.max(1, cs - l.spread.l);
+        rs = Math.max(1, rs - l.spread.t);
+        ce += l.spread.r;
+        re += l.spread.b;
+      }
       k.style.gridColumn = `${cs} / ${ce}`;
       k.style.gridRow = `${rs} / ${re}`;
       if (l.styles) Object.assign(k.style, l.styles);
     });
   },
-  calc(n, x, y, w, h, leaves, pSkip, offRules) {
+  calc(n, x, y, w, h, leaves, pSkip, offRules, activePropRules, activeSpreadRules) {
     if (!n) return;
     if (typeof n === "number" || n === "auto") n = new LayoutNode(n === "auto" ? "auto" : n, "leaf");
     const isLayoutNode = this.isNode(n);
@@ -173,14 +179,46 @@ var Engine = {
     if (isLayoutNode && n.offsetIndices?.length) offs.push({ idx: n.offsetIndices, c: 0 });
     let customSize = void 0;
     if (isLayoutNode && typeof n.size === "string") customSize = n.size;
+    const nextPropRules = [...activePropRules];
+    const nextSpreadRules = [...activeSpreadRules];
+    if (isLayoutNode) {
+      if (n.childPropRules.length > 0) {
+        n.childPropRules.forEach((r) => nextPropRules.push({ rule: r, counter: { val: 0 } }));
+      }
+      if (n.childSpreadRules.length > 0) {
+        n.childSpreadRules.forEach((r) => nextSpreadRules.push({ rule: r, counter: { val: 0 } }));
+      }
+    }
     if (!isLayoutNode || !n.children.length) {
       let finalSkip = skip;
       offs.forEach((r) => {
         r.c++;
         if (r.idx.includes(r.c)) finalSkip = true;
       });
-      const s = isLayoutNode ? n.styles : {};
-      leaves.push(new Rect(x, y, w, h, s, finalSkip, customSize));
+      if (!finalSkip) {
+        nextPropRules.forEach((t) => t.counter.val++);
+        nextSpreadRules.forEach((t) => t.counter.val++);
+      }
+      const finalSpread = isLayoutNode ? { ...n.spreadData } : { t: 0, r: 0, b: 0, l: 0 };
+      if (!finalSkip) {
+        nextSpreadRules.forEach((tracker) => {
+          if (!tracker.rule.indices || tracker.rule.indices.includes(tracker.counter.val)) {
+            finalSpread.t += tracker.rule.data.t;
+            finalSpread.r += tracker.rule.data.r;
+            finalSpread.b += tracker.rule.data.b;
+            finalSpread.l += tracker.rule.data.l;
+          }
+        });
+      }
+      const finalStyles = isLayoutNode ? { ...n.styles } : {};
+      if (!finalSkip) {
+        nextPropRules.forEach((tracker) => {
+          if (!tracker.rule.indices || tracker.rule.indices.includes(tracker.counter.val)) {
+            Object.assign(finalStyles, tracker.rule.data);
+          }
+        });
+      }
+      leaves.push(new Rect(x, y, w, h, finalStyles, finalSkip, customSize, finalSpread));
       return;
     }
     let tw = 0;
@@ -192,7 +230,7 @@ var Engine = {
     });
     if (tw === 0) tw = 1;
     let pos = n.type === "col" ? x : y;
-    n.children.forEach((c) => {
+    n.children.forEach((c, i) => {
       let s = this.isNode(c) ? c.size : c;
       let isString = typeof s === "string";
       let numSize = isString ? 0 : Number(s);
@@ -206,11 +244,11 @@ var Engine = {
       }
       if (n.type === "col") {
         let cw = isString ? stringWidth : w * r;
-        this.calc(c, pos, y, cw, h, leaves, skip, offs);
+        this.calc(c, pos, y, cw, h, leaves, skip, offs, nextPropRules, nextSpreadRules);
         pos += cw;
       } else {
         let ch = isString ? stringWidth : h * r;
-        this.calc(c, x, pos, w, ch, leaves, skip, offs);
+        this.calc(c, x, pos, w, ch, leaves, skip, offs, nextPropRules, nextSpreadRules);
         pos += ch;
       }
     });
@@ -234,15 +272,14 @@ var Engine = {
       const tracks = [];
       for (let i = 1; i < cuts.length; i++) {
         let size = cuts[i] - cuts[i - 1];
-        let foundString = null;
+        let found = null;
         for (let [k, v] of this._strMap) {
           if (Math.abs(size - k) < 1e-8) {
-            foundString = v;
+            found = v;
             break;
           }
         }
-        if (foundString) tracks.push(foundString);
-        else tracks.push(size + "fr");
+        tracks.push(found ? found : size + "fr");
       }
       return tracks;
     };

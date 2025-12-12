@@ -1,5 +1,5 @@
 import React, { HTMLAttributes, ReactNode } from 'react';
-import { L as LayoutNode } from './core-XdQQ2SP1.js';
+import { L as LayoutNode } from './core-E1NpyJVP.js';
 
 declare const Grid = 100;
 declare const lg = 61.8;

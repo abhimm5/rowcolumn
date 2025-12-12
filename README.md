@@ -66,8 +66,9 @@ It supports **React**, **Vue**, **TypeScript**, and **Vanilla JS** out of the bo
 2. **Or use via CDN (Vanilla HTML):**
    ```html
    <script type="module">
-     import { Engine } from 'https://unpkg.com/rowscolumns';
-     Engine.init();
+    import { Engine, Grid } from 'https://unpkg.com/rowscolumns@1.4.0/dist/index.mjs';
+    window.Engine = Engine; window.Grid = Grid;
+    Engine.init();
    </script>
    ```
 
@@ -181,6 +182,13 @@ Applies CSS directly to specific **DOM Children**.
 ```js
 // Makes the 2nd child red, regardless of where it sits in the grid
 Grid.col(50, 50).childProps({ background: 'red' }, [2])
+```
+
+### `.spread(['dir'], [indices])`
+Expands an item across multiple tracks (Spanning). Directions: `t` (top), `r` (right), `b` (bottom), `l` (left).
+```js
+// Expand 1st child to the Right by 1 (Span 2 cols)
+Grid.col(33, 33, 33).spread(['r1'], [1])
 ```
 
 ---
