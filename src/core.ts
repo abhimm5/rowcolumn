@@ -1,17 +1,13 @@
 /**
- * ROWS-COLUMNS-LAYOUT: NATIVE EDITION
+ * ROWS-COLUMNS-LAYOUT: OPTIMIZED NATIVE EDITION (v1.4.0)
  */
 
 // --- TYPES ---
 export interface StyleMap { [key: string]: string | number; }
+export interface ChildPropRule { style: StyleMap; indices: number[] | null; }
 export interface SpreadData { t: number, r: number, b: number, l: number; }
 export interface Rule<T> { data: T; indices: number[] | null; }
-
-// Tracking object for active rules in recursion
-interface ActiveRule<T> {
-    rule: Rule<T>;
-    counter: { val: number }; // Object reference so it increments across siblings
-}
+interface ActiveRule<T> { rule: Rule<T>; counter: { val: number }; }
 
 // CONSTANTS
 const AUTO_SIZE = 0.000001;
@@ -40,7 +36,6 @@ export class LayoutNode {
   styles: StyleMap = {}; 
   spreadData: SpreadData = { t:0, r:0, b:0, l:0 }; 
 
-  // Rules targeting scoped children
   childPropRules: Rule<StyleMap>[] = [];
   childSpreadRules: Rule<SpreadData>[] = [];
 
@@ -111,7 +106,7 @@ export function installExtensions() {
 // --- 3. THE ENGINE ---
 export const Engine = {
   bps: { sm: 576, md: 768, lg: 992, xl: 1200, xxl: 1400 } as any,
-  _strMap: new Map<number, string>(),
+  _strMap: new Map<string, string>(), // OPTIMIZED: Key is stringified float
   _strCounter: 0,
 
   init() {
@@ -153,19 +148,36 @@ export const Engine = {
 
     if (tree.styles) Object.assign(el.style, tree.styles);
 
-    const leaves: Rect[] = [];
+    // Optimized Rule Collection (Flat Map)
+    const domStyles: Rule<StyleMap>[] = [];
+    const spreadStack: SpreadRule[] = [];
     
-    // START RECURSION
-    // We pass empty arrays for active rules. 
-    this.calc(tree, 0, 0, 100, 100, leaves, false, [], [], []);
+    const collectRules = (n: any) => {
+        if(this.isNode(n)) {
+            if(n.childPropRules) domStyles.push(...n.childPropRules);
+            if(n.childSpreadRules) spreadStack.push(...n.childSpreadRules);
+            n.children.forEach(collectRules);
+        }
+    };
+    collectRules(tree);
+
+    const leaves: Rect[] = [];
+    // Start recursion
+    this.calc(tree, 0, 0, 100, 100, leaves, false, [], spreadStack, { val: 0 });
 
     const { cw, rh, xc, yc } = this.mesh(leaves);
-    el.style.display = "grid";
+    el.style.display = 'grid';
     el.style.gridTemplateColumns = cw.join(' ');
     el.style.gridTemplateRows = rh.join(' ');
 
     const kids = Array.from(el.children) as HTMLElement[];
-    kids.forEach((k) => { k.style.gridColumn=''; k.style.gridRow=''; k.style.cssText=''; });
+    kids.forEach((k, i) => {
+       k.style.gridColumn=''; k.style.gridRow=''; k.style.cssText='';
+       // Apply Styles
+       for(const r of domStyles) {
+         if(!r.indices || r.indices.includes(i + 1)) Object.assign(k.style, r.data);
+       }
+    });
 
     let kidIdx = 0;
     leaves.forEach(l => {
@@ -178,7 +190,6 @@ export const Engine = {
        let rs = this.idx(yc, l.y) + 1;
        let re = this.idx(yc, l.y + l.h) + 1;
 
-       // APPLY SPREAD
        if (l.spread) {
            cs = Math.max(1, cs - l.spread.l);
            rs = Math.max(1, rs - l.spread.t);
@@ -196,10 +207,8 @@ export const Engine = {
   calc(
       n: any, x: number, y: number, w: number, h: number, 
       leaves: Rect[], pSkip: boolean, offRules: any[], 
-      
-      // TRACKING STACKS
-      activePropRules: ActiveRule<StyleMap>[],
-      activeSpreadRules: ActiveRule<SpreadData>[]
+      spreadStack: SpreadRule[], 
+      counter: { val: number }
   ) {
     if (!n) return;
     if (typeof n === 'number' || n === 'auto') n = new LayoutNode(n === 'auto' ? 'auto' : n, 'leaf');
@@ -207,69 +216,47 @@ export const Engine = {
     const isLayoutNode = this.isNode(n);
     const skip = pSkip || (isLayoutNode && n.isSkippedSelf);
     
-    // 1. Manage Offsets (Local to this node)
-    const offs = [...offRules];
-    if (isLayoutNode && n.offsetIndices?.length) offs.push({ idx: n.offsetIndices, c: 0 });
+    // OPTIMIZED: Stack management without cloning
+    const offsLen = offRules.length;
+    if (isLayoutNode && n.offsetIndices?.length) offRules.push({ idx: n.offsetIndices, c: 0 });
 
     let customSize = undefined;
     if (isLayoutNode && typeof n.size === 'string') customSize = n.size;
     
-    // 2. PREPARE NEW RULES
-    // If this node defines rules, create NEW trackers starting at 0
-    const nextPropRules = [...activePropRules];
-    const nextSpreadRules = [...activeSpreadRules];
-
-    if (isLayoutNode) {
-        if(n.childPropRules.length > 0) {
-            n.childPropRules.forEach((r: any) => nextPropRules.push({ rule: r, counter: {val: 0} }));
-        }
-        if(n.childSpreadRules.length > 0) {
-            n.childSpreadRules.forEach((r: any) => nextSpreadRules.push({ rule: r, counter: {val: 0} }));
-        }
-    }
-
-    // --- LEAF NODE LOGIC ---
+    // Leaf Node
     if (!isLayoutNode || !n.children.length) {
-       // A. Calculate if this leaf is skipped by offset
        let finalSkip = skip;
-       offs.forEach(r => { r.c++; if (r.idx.includes(r.c)) finalSkip = true; });
-
-       // B. If NOT skipped, it counts as a visual child for all active rules
-       //    So we increment their counters.
-       if (!finalSkip) {
-           nextPropRules.forEach(t => t.counter.val++);
-           nextSpreadRules.forEach(t => t.counter.val++);
+       // Process stack in-place
+       for(let i=0; i<offRules.length; i++) {
+           offRules[i].c++;
+           if (offRules[i].idx.includes(offRules[i].c)) finalSkip = true;
        }
 
-       // C. Calculate Intrinsic Spread (Self) + Rule-Based Spread (Ancestors)
+       if (!finalSkip) counter.val++;
+
        const finalSpread = isLayoutNode ? { ...n.spreadData } : {t:0,r:0,b:0,l:0};
 
        if (!finalSkip) {
-           nextSpreadRules.forEach(tracker => {
-               if (!tracker.rule.indices || tracker.rule.indices.includes(tracker.counter.val)) {
-                   finalSpread.t += tracker.rule.data.t;
-                   finalSpread.r += tracker.rule.data.r;
-                   finalSpread.b += tracker.rule.data.b;
-                   finalSpread.l += tracker.rule.data.l;
+           spreadStack.forEach(rule => {
+               if (!rule.indices || rule.indices.includes(counter.val)) {
+                   const parsed = parseSpread(rule.directions);
+                   finalSpread.t += parsed.t;
+                   finalSpread.r += parsed.r;
+                   finalSpread.b += parsed.b;
+                   finalSpread.l += parsed.l;
                }
            });
        }
 
-       // D. Calculate Styles
-       const finalStyles = isLayoutNode ? { ...n.styles } : {};
-       if (!finalSkip) {
-           nextPropRules.forEach(tracker => {
-               if (!tracker.rule.indices || tracker.rule.indices.includes(tracker.counter.val)) {
-                   Object.assign(finalStyles, tracker.rule.data);
-               }
-           });
-       }
-
-       leaves.push(new Rect(x, y, w, h, finalStyles, finalSkip, customSize, finalSpread));
+       const s = isLayoutNode ? n.styles : {}; 
+       leaves.push(new Rect(x, y, w, h, s, finalSkip, customSize, finalSpread));
+       
+       // Pop offset rule before returning (Clean up stack)
+       if (offRules.length > offsLen) offRules.pop();
        return;
     }
 
-    // --- CONTAINER LOGIC ---
+    // Container Logic
     let tw = 0;
     n.children.forEach((c: any) => {
        let s = this.isNode(c) ? c.size : c;
@@ -281,7 +268,7 @@ export const Engine = {
 
     let pos = (n.type === 'col') ? x : y;
     
-    n.children.forEach((c: any, i: number) => {
+    n.children.forEach((c: any) => {
        let s = this.isNode(c) ? c.size : c;
        let isString = (typeof s === 'string');
        let numSize = isString ? 0 : Number(s);
@@ -292,25 +279,30 @@ export const Engine = {
        if (isString) {
            this._strCounter++;
            stringWidth = AUTO_SIZE + (this._strCounter * 0.0000001);
-           this._strMap.set(stringWidth, s as string); 
+           // OPTIMIZED: Direct Map Key
+           this._strMap.set(stringWidth.toFixed(8), s as string); 
        }
 
        if (n.type === 'col') {
           let cw = isString ? stringWidth : (w * r);
-          this.calc(c, pos, y, cw, h, leaves, skip, offs, nextPropRules, nextSpreadRules); 
+          this.calc(c, pos, y, cw, h, leaves, skip, offRules, spreadStack, counter); 
           pos += cw;
        } else {
           let ch = isString ? stringWidth : (h * r);
-          this.calc(c, x, pos, w, ch, leaves, skip, offs, nextPropRules, nextSpreadRules); 
+          this.calc(c, x, pos, w, ch, leaves, skip, offRules, spreadStack, counter); 
           pos += ch;
        }
     });
+
+    // Pop offset rule after children done
+    if (offRules.length > offsLen) offRules.pop();
   },
 
   mesh(leaves: Rect[]) {
     this._strCounter = 0; 
     let rx = [0], ry = [0]; 
     let maxX = 0, maxY = 0;
+
     leaves.forEach(r => { 
         rx.push(r.x, r.x + r.w); ry.push(r.y, r.y + r.h); 
         if(r.x + r.w > maxX) maxX = r.x + r.w;
@@ -326,8 +318,9 @@ export const Engine = {
         const tracks = [];
         for(let i=1; i<cuts.length; i++) {
             let size = cuts[i] - cuts[i-1];
-            let found = null;
-            for (let [k, v] of this._strMap) { if (Math.abs(size - k) < 0.00000001) { found = v; break; } }
+            // OPTIMIZED: Direct lookup
+            const key = size.toFixed(8);
+            const found = this._strMap.get(key);
             tracks.push(found ? found : size + 'fr');
         }
         return tracks;
@@ -335,9 +328,53 @@ export const Engine = {
     return { xc, yc, cw: getTracks(xc), rh: getTracks(yc) };
   },
 
+  // OPTIMIZED: Binary Search (O(log n))
   idx(arr: number[], val: number) {
-    let idx = -1, min = Infinity;
-    arr.forEach((v, i) => { let d = Math.abs(v - val); if (d < min) { min = d; idx = i; } });
-    return idx;
+    let lo = 0, hi = arr.length - 1;
+    while (lo <= hi) {
+      const mid = (lo + hi) >> 1;
+      const v = arr[mid];
+      if (Math.abs(v - val) < 1e-8) return mid;
+      if (v < val) lo = mid + 1;
+      else hi = mid - 1;
+    }
+    return Math.max(0, hi);
+  },
+
+  // --- NEW: STATIC COMPILER (Zero Runtime) ---
+  compileCSS(layoutStr: string) {
+      const root = this.evalLayout(layoutStr);
+      if(!root) return null;
+      
+      const leaves: Rect[] = [];
+      // Empty rules stack
+      this.calc(root, 0, 0, 100, 100, leaves, false, [], [], { val: 0 });
+      
+      const { cw, rh, xc, yc } = this.mesh(leaves);
+      
+      let css = `display: grid; grid-template-columns: ${cw.join(' ')}; grid-template-rows: ${rh.join(' ')};`;
+      
+      // Calculate child areas
+      let childCss = '';
+      let kidIdx = 1;
+      leaves.forEach(l => {
+          if(l.isSkipped) return;
+          
+          let cs = this.idx(xc, l.x) + 1;
+          let ce = this.idx(xc, l.x + l.w) + 1;
+          let rs = this.idx(yc, l.y) + 1;
+          let re = this.idx(yc, l.y + l.h) + 1;
+          
+          if (l.spreadData) {
+              cs = Math.max(1, cs - l.spreadData.l);
+              rs = Math.max(1, rs - l.spreadData.t);
+              ce += l.spreadData.r;
+              re += l.spreadData.b;
+          }
+          
+          childCss += `\n  & > :nth-child(${kidIdx++}) { grid-area: ${rs} / ${cs} / ${re} / ${ce}; }`;
+      });
+      
+      return css + childCss;
   }
 };
