@@ -1,6 +1,6 @@
 {
   "name": "rowscolumns",
-  "version": "1.4.2",
+  "version": "1.5.0",
   "description": "A robust, native-syntax grid layout engine.",
   "main": "./dist/index.js",
   "module": "./dist/index.mjs",
@@ -19,7 +19,8 @@
     "golden-ratio",
     "symmetry",
     "js-framework",
-    "no-flexbox"
+    "no-flexbox",
+    "two-dimensional"
   ],
 
   "files": [
@@ -43,6 +44,11 @@
       "types": "./dist/vue.d.ts",
       "import": "./dist/vue.mjs",
       "require": "./dist/vue.js"
+    },
+    "./angular": {
+      "types": "./dist/angular.d.ts",
+      "import": "./dist/angular.mjs",
+      "require": "./dist/angular.js"
     }
   },
   "scripts": {
@@ -51,17 +57,23 @@
   },
   "peerDependencies": {
     "react": ">=16",
-    "vue": ">=3"
+    "vue": ">=3",
+    "@angular/core": ">=14",
+    "@angular/common": ">=14"
   },
   "peerDependenciesMeta": {
     "react": { "optional": true },
-    "vue": { "optional": true }
+    "vue": { "optional": true },
+    "@angular/core": { "optional": true },
+    "@angular/common": { "optional": true }
   },
   "devDependencies": {
     "tsup": "^8.0.0",
     "typescript": "^5.0.0",
     "@types/react": "^18.0.0",
     "react": "^18.0.0",
-    "vue": "^3.0.0"
+    "vue": "^3.0.0",
+    "@angular/core": "^14.0.0",
+    "@angular/common": "^14.0.0"
   }
 }

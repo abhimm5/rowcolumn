@@ -1,6 +1,6 @@
 import * as vue from 'vue';
 import { PropType } from 'vue';
-import { L as LayoutNode } from './core-E1NpyJVP.js';
+import { L as LayoutNode } from './core-DgjZBu69.js';
 
 declare const Layout: vue.DefineComponent<vue.ExtractPropTypes<{
     layout: {
