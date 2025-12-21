@@ -1,6 +1,6 @@
 {
   "name": "rowscolumns",
-  "version": "1.5.0",
+  "version": "1.6.2",
   "description": "A robust, native-syntax grid layout engine.",
   "main": "./dist/index.js",
   "module": "./dist/index.mjs",
