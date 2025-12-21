@@ -26,8 +26,10 @@ yarn-error.log*
 # Html files
 *.html
 *.css
+*.jsx
 
 #images
 *.png
 *.jpg
 *.svg
+*.jpeg
